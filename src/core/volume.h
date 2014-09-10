@@ -96,7 +96,9 @@ public:
     }
     Spectrum tau(const Ray &r, float stepSize, float offset) const;
     
-    bool Inside(const Point &p) const{ return true; }
+    bool Inside(const Point &p) const{
+        return true;
+    }
 protected:
     // DensityRegion Protected Data
     Spectrum sig_a, sig_s, le;

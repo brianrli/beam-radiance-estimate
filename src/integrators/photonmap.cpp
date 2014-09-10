@@ -398,12 +398,13 @@ void PhotonShootingTask::Run() {
             float pdf;
             LightSample ls(u[1], u[2], u[3]);
             Normal Nl;
+
+            
             Spectrum Le = light->Sample_L(scene, ls, u[4], u[5],
                                           time, &photonRay, &Nl, &pdf);
-            
             if (pdf == 0.f || Le.IsBlack()) continue;
-
             Spectrum alpha = (AbsDot(Nl, photonRay.d) * Le) / (pdf * lightPdf);
+            
             if (!alpha.IsBlack()) {
                 // Follow photon path through scene and record intersections
                 PBRT_PHOTON_MAP_STARTED_RAY_PATH(&photonRay, &alpha);

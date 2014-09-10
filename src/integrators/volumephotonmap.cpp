@@ -91,24 +91,19 @@ float SampleScattering(const Vector &wi, float u1, float u2, Vector &wo){
     return VPhaseHG(wi, wo, 0.9f);
 }
 void VolumePhotonShootingTask::Run() {
+    
     // Declare local variables for _VolumePhotonShootingTask_
     VolumeRegion *volume = scene->volumeRegion;
     float marchstep = integrator->marchStep;
-
     MemoryArena arena;
-    
     RNG rng(31 * taskNum);
     vector<Photon> localVolumePhotons; //new data structure
-    
     uint32_t totalPaths = 0;
-    
+    PermutedHalton halton(6, rng);
     //set finish conditions
     bool volumeDone = (integrator->nVolumePhotonsWanted == 0);
-    
-    PermutedHalton halton(6, rng);
-    
-    while (true) {
 
+    while (true) {
 //        const uint32_t blockSize = 4096;
         const uint32_t blockSize = 500;
         for (uint32_t i = 0; i < blockSize; ++i) {
@@ -117,18 +112,22 @@ void VolumePhotonShootingTask::Run() {
             halton.Sample(++totalPaths, u); //random sample
             
             // Choose light to shoot photon from
-            float lightPdf;
+            float lightPdf; //prob distribution function
             int lightNum = lightDistribution->SampleDiscrete(u[0], &lightPdf);
-            const Light *light = scene->lights[lightNum];
+            const Light *light = scene->lights[lightNum]; //choose light
             
             // Generate _photonRay_ from light source and initialize _alpha_
             RayDifferential photonRay;
             float pdf;
             LightSample ls(u[1], u[2], u[3]);
             Normal Nl;
+            
+//            Spectrum alpha = light->Sample_L(scene, ls, u[4], u[5], time, &photonRay, &Nl, &pdf);
+//            if (pdf == 0.f || alpha.IsBlack()) continue;
+//            alpha /= pdf * lightPdf;
+            
             Spectrum Le = light->Sample_L(scene, ls, u[4], u[5],
                                           time, &photonRay, &Nl, &pdf);
-            
             if (pdf == 0.f || Le.IsBlack()) continue;
             Spectrum alpha = (AbsDot(Nl, photonRay.d) * Le) / (pdf * lightPdf);
 
@@ -136,8 +135,6 @@ void VolumePhotonShootingTask::Run() {
 
                 // Follow photon path through scene and record intersections
                 PBRT_PHOTON_MAP_STARTED_RAY_PATH(&photonRay, &alpha);
-
-                bool hitVolumeOnce = false;
 
                 Intersection photonIsect;
                 int nIntersections = 0;
@@ -151,7 +148,6 @@ void VolumePhotonShootingTask::Run() {
                     float inVolume = true;
 
                     // Enter volume photon mode till we leave the volumeRegion
-                    hitVolumeOnce = true;
                     float u2, u6;
                     
                     Ray volumeRay;
@@ -159,13 +155,16 @@ void VolumePhotonShootingTask::Run() {
                     volumeRay.d = Normalize(photonRay.d); // Hard to know if it's normalized. Just do it again.
                     volumeRay.mint = 0;
                     
-                    u2 = (rng.RandomFloat() + 0.5f) * marchstep;
+                    u2 = (rng.RandomFloat() + 0.5f) * marchstep; //[0,1) + 0.5 * marchstep
+                    
                     if( u2 >= (vt1-vt0)/photonRay.d.Length()){
                         photonRay.o = volumeRay(vt1+0.00001f);
                         alpha *= Exp(-volume->tau(volumeRay));
-                        break;
+                        inVolume = false;
                     }
-                    else volumeRay.maxt = u2;
+                    else{
+                        volumeRay.maxt = u2;
+                    }                    
 
                     while(inVolume)
                     {
@@ -175,6 +174,7 @@ void VolumePhotonShootingTask::Run() {
                         alpha *= transmittance;
 
                         if(1){ // Enforce interaction
+                            
                             Point interactPoint = volumeRay(volumeRay.maxt);
                             
                             // Store a photon
@@ -185,7 +185,7 @@ void VolumePhotonShootingTask::Run() {
                             }
                             
                             // Choose scattering or absorbing
-                            if(rng.RandomFloat() * volume->sigma_t(interactPoint, volumeRay.d,volumeRay.time).y() <
+                            if((rng.RandomFloat() * volume->sigma_t(interactPoint, volumeRay.d,volumeRay.time).y()) <
                                volume->sigma_s(interactPoint, volumeRay.d,volumeRay.time).y()){
 
                                 // Scattering, sampling a new direction
@@ -200,14 +200,10 @@ void VolumePhotonShootingTask::Run() {
                                 u6 = rng.RandomFloat() + 0.5f;
                                 photonRay.maxt = marchstep * u6; //new photonray
                                 
-                                if(!volume->Inside(photonRay(photonRay.maxt))){ break; }
-                                //++nIntersections;
-    //                                volume->IntersectP(volumeRay, &vt0, &vt1);
-    //                                volumeRay.maxt = vt1;
-    //                                alpha *= Exp(-volume->tau(volumeRay));
-    //                                photonRay = RayDifferential(volumeRay(vt1+0.0001f), volumeRay.d);
-    //                                inVolume = false;
-    //                            }
+                                if(!volume->Inside(photonRay(photonRay.maxt))){
+                                    break;
+                                }
+
                             }
                             else
                                 break; // Absorbing, end of the story
@@ -392,6 +388,7 @@ Spectrum VolumePhotonIntegrator::Li(const Scene *scene,
 	
     float t0, t1;
 	if (!vr || !vr->IntersectP(ray, &t0, &t1)) return 0.f;
+
 	// Do multiple scattering volume integration in _vr_
 	Spectrum Lv(0.);
 
@@ -490,7 +487,7 @@ VolumePhotonIntegrator *CreatePhotonMapVolumeIntegrator(const ParamSet &params) 
     //new parameters
     int nVolume = params.FindOneInt("volumephotons", 100000);
     float marchStep = params.FindOneFloat("marchstep", 4.0f);
-    float stepSize  = params.FindOneFloat("stepsize", 1.f);
+    float stepSize  = params.FindOneFloat("stepsize", 4.f);
 
     return new VolumePhotonIntegrator(nVolume, nUsed, maxPhotonDepth, maxDist, gatherSamples,
                                       gatherAngle, marchStep, stepSize);
