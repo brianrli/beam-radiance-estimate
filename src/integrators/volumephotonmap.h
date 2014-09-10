@@ -24,9 +24,9 @@ class VolumePhotonIntegrator : public VolumeIntegrator {
 public:
     // PhotonIntegrator Public Methods
     
-    VolumePhotonIntegrator(int ncaus, int nind, int nvol,
-                           int nl, int mdepth, int mphodepth, float mdist, bool fg,
+    VolumePhotonIntegrator(int nvol, int nl, int mphodepth, float mdist,
                            int gs, float ga, float mstep, float steps);
+    
     ~VolumePhotonIntegrator(){}
     
     Spectrum Li(const Scene *scene,
@@ -55,8 +55,7 @@ private:
     // PhotonIntegrator Private Data
     uint32_t nCausticPhotonsWanted, nIndirectPhotonsWanted, nVolumePhotonsWanted, nLookup;
     float maxDistSquared;
-    int maxSpecularDepth, maxPhotonDepth;
-    bool finalGather;
+    int maxPhotonDepth;
     int gatherSamples;
     float cosGatherAngle;
     float marchStep;
@@ -67,12 +66,9 @@ private:
     LightSampleOffsets *lightSampleOffsets;
     BSDFSampleOffsets *bsdfSampleOffsets;
     BSDFSampleOffsets bsdfGatherSampleOffsets, indirGatherSampleOffsets;
-    int nCausticPaths, nIndirectPaths, nVolumePaths;
+    int nVolumePaths;
 
-    KdTree<Photon> *causticMap;
-    KdTree<Photon> *indirectMap;
     KdTree<Photon> *volumeMap;
-    KdTree<RadiancePhoton> *radianceMap;
 };
 
 VolumePhotonIntegrator *CreatePhotonMapVolumeIntegrator(const ParamSet &params);

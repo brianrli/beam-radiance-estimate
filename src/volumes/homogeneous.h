@@ -80,6 +80,10 @@ public:
         if (!IntersectP(ray, &t0, &t1)) return 0.;
         return Distance(ray(t0), ray(t1)) * (sig_a + sig_s);
     }
+    
+    bool Inside(const Point &p) const{
+        return extent.Inside(WorldToVolume(p));
+    };
 private:
     // HomogeneousVolumeDensity Private Data
     Spectrum sig_a, sig_s, le;

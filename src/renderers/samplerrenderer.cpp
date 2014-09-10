@@ -215,6 +215,7 @@ Spectrum SamplerRenderer::Li(const Scene *scene,
     Intersection localIsect;
     if (!isect) isect = &localIsect;
     Spectrum Li = 0.f;
+    //so this works
     if (scene->Intersect(ray, isect))
         Li = surfaceIntegrator->Li(scene, this, ray, *isect, sample,
                                    rng, arena);
@@ -223,9 +224,11 @@ Spectrum SamplerRenderer::Li(const Scene *scene,
         for (uint32_t i = 0; i < scene->lights.size(); ++i)
            Li += scene->lights[i]->Le(ray);
     }
+    
+    //radiance due to volume scattering
     Spectrum Lvi = volumeIntegrator->Li(scene, this, ray, sample, rng,
                                         T, arena);
-    return *T * Li + Lvi;
+    return *T * Li+ Lvi;
 }
 
 

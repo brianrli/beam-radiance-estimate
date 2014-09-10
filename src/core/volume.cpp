@@ -202,6 +202,15 @@ Spectrum AggregateVolume::tau(const Ray &ray, float step, float offset) const {
     return t;
 }
 
+bool AggregateVolume::Inside(const Point &p) const{
+    bool inside = false;
+    for(u_int i = 0; i < regions.size(); i++)
+    {
+        inside |= regions[i]->Inside(p);
+    }
+    return inside;
+}
+
 
 bool AggregateVolume::IntersectP(const Ray &ray,
                                  float *t0, float *t1) const {

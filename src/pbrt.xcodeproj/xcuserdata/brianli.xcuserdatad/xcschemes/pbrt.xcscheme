@@ -67,7 +67,7 @@
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "--outfile /Users/brianli/Desktop/pbrt-v2-master/output/spot-output-direct.exr"
+            argument = "--outfile /Users/brianli/Desktop/pbrt-v2-master/output/2000vp500bsHG.exr"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
