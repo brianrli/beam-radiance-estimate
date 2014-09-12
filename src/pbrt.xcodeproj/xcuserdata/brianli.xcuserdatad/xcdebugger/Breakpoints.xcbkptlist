@@ -7,300 +7,66 @@
          shouldBeEnabled = "No"
          ignoreCount = "0"
          continueAfterRunningActions = "No"
-         filePath = "integrators/volumephotonmap.cpp"
-         timestampString = "432014866.49673"
+         filePath = "core/vkdtree.h"
+         timestampString = "432249758.732155"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "493"
-         endingLineNumber = "493"
-         landmarkName = "CreatePhotonMapVolumeIntegrator(const ParamSet &amp;params)"
+         startingLineNumber = "163"
+         endingLineNumber = "163"
+         landmarkName = "buildRadii(uint32_t nodeNum, const Point &amp;p, LookupProc &amp;proc, float &amp;maxDistSquared)"
          landmarkType = "7">
       </FileBreakpoint>
       <FileBreakpoint
          shouldBeEnabled = "No"
          ignoreCount = "0"
          continueAfterRunningActions = "No"
-         filePath = "integrators/volumephotonmap.cpp"
-         timestampString = "432014866.49673"
+         filePath = "core/vkdtree.h"
+         timestampString = "432249758.732155"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "289"
-         endingLineNumber = "289"
-         landmarkName = "VolumePhotonIntegrator::Preprocess(const Scene *scene, const Camera *camera, const Renderer *renderer)"
-         landmarkType = "5">
-      </FileBreakpoint>
-      <FileBreakpoint
-         shouldBeEnabled = "No"
-         ignoreCount = "0"
-         continueAfterRunningActions = "No"
-         filePath = "integrators/volumephotonmap.cpp"
-         timestampString = "432012502.244187"
-         startingColumnNumber = "9223372036854775807"
-         endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "120"
-         endingLineNumber = "120"
-         landmarkName = "VolumePhotonShootingTask::Run()"
-         landmarkType = "5">
-      </FileBreakpoint>
-      <FileBreakpoint
-         shouldBeEnabled = "No"
-         ignoreCount = "0"
-         continueAfterRunningActions = "No"
-         filePath = "integrators/volumephotonmap.cpp"
-         timestampString = "432014866.49673"
-         startingColumnNumber = "9223372036854775807"
-         endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "228"
-         endingLineNumber = "228"
-         landmarkName = "VolumePhotonShootingTask::Run()"
-         landmarkType = "5">
-      </FileBreakpoint>
-      <FileBreakpoint
-         shouldBeEnabled = "No"
-         ignoreCount = "0"
-         continueAfterRunningActions = "No"
-         filePath = "integrators/volumephotonmap.cpp"
-         timestampString = "432014866.49673"
-         startingColumnNumber = "9223372036854775807"
-         endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "240"
-         endingLineNumber = "240"
-         landmarkName = "VolumePhotonShootingTask::Run()"
-         landmarkType = "5">
-      </FileBreakpoint>
-      <FileBreakpoint
-         shouldBeEnabled = "No"
-         ignoreCount = "0"
-         continueAfterRunningActions = "No"
-         filePath = "integrators/volumephotonmap.cpp"
-         timestampString = "432014866.49673"
-         startingColumnNumber = "9223372036854775807"
-         endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "213"
-         endingLineNumber = "213"
-         landmarkName = "VolumePhotonShootingTask::Run()"
-         landmarkType = "5">
-      </FileBreakpoint>
-      <FileBreakpoint
-         shouldBeEnabled = "No"
-         ignoreCount = "0"
-         continueAfterRunningActions = "No"
-         filePath = "integrators/volumephotonmap.cpp"
-         timestampString = "432014866.49673"
-         startingColumnNumber = "9223372036854775807"
-         endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "222"
-         endingLineNumber = "222"
-         landmarkName = "VolumePhotonShootingTask::Run()"
-         landmarkType = "5">
-      </FileBreakpoint>
-      <FileBreakpoint
-         shouldBeEnabled = "No"
-         ignoreCount = "0"
-         continueAfterRunningActions = "No"
-         filePath = "integrators/volumephotonmap.cpp"
-         timestampString = "432014866.49673"
-         startingColumnNumber = "9223372036854775807"
-         endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "223"
-         endingLineNumber = "223"
-         landmarkName = "VolumePhotonShootingTask::Run()"
-         landmarkType = "5">
-      </FileBreakpoint>
-      <FileBreakpoint
-         shouldBeEnabled = "Yes"
-         ignoreCount = "0"
-         continueAfterRunningActions = "No"
-         filePath = "integrators/volumephotonmap.cpp"
-         timestampString = "432014866.49673"
-         startingColumnNumber = "9223372036854775807"
-         endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "230"
-         endingLineNumber = "230"
-         landmarkName = "VolumePhotonShootingTask::Run()"
-         landmarkType = "5">
-      </FileBreakpoint>
-      <FileBreakpoint
-         shouldBeEnabled = "No"
-         ignoreCount = "0"
-         continueAfterRunningActions = "No"
-         filePath = "integrators/volumephotonmap.cpp"
-         timestampString = "432014866.49673"
-         startingColumnNumber = "9223372036854775807"
-         endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "300"
-         endingLineNumber = "300"
-         landmarkName = "VolumePhotonIntegrator::Preprocess(const Scene *scene, const Camera *camera, const Renderer *renderer)"
-         landmarkType = "5">
-      </FileBreakpoint>
-      <FileBreakpoint
-         shouldBeEnabled = "No"
-         ignoreCount = "0"
-         continueAfterRunningActions = "No"
-         filePath = "integrators/volumephotonmap.cpp"
-         timestampString = "432014866.49673"
-         startingColumnNumber = "9223372036854775807"
-         endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "288"
-         endingLineNumber = "288"
-         landmarkName = "VolumePhotonIntegrator::Preprocess(const Scene *scene, const Camera *camera, const Renderer *renderer)"
-         landmarkType = "5">
-      </FileBreakpoint>
-      <FileBreakpoint
-         shouldBeEnabled = "No"
-         ignoreCount = "0"
-         continueAfterRunningActions = "No"
-         filePath = "integrators/volumephotonmap.cpp"
-         timestampString = "432014866.49673"
-         startingColumnNumber = "9223372036854775807"
-         endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "290"
-         endingLineNumber = "290"
-         landmarkName = "VolumePhotonIntegrator::Preprocess(const Scene *scene, const Camera *camera, const Renderer *renderer)"
-         landmarkType = "5">
-      </FileBreakpoint>
-      <FileBreakpoint
-         shouldBeEnabled = "No"
-         ignoreCount = "0"
-         continueAfterRunningActions = "No"
-         filePath = "integrators/volumephotonmap.cpp"
-         timestampString = "432014866.49673"
-         startingColumnNumber = "9223372036854775807"
-         endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "291"
-         endingLineNumber = "291"
-         landmarkName = "VolumePhotonIntegrator::Preprocess(const Scene *scene, const Camera *camera, const Renderer *renderer)"
-         landmarkType = "5">
-      </FileBreakpoint>
-      <FileBreakpoint
-         shouldBeEnabled = "No"
-         ignoreCount = "0"
-         continueAfterRunningActions = "No"
-         filePath = "renderers/samplerrenderer.cpp"
-         timestampString = "431924744.579354"
-         startingColumnNumber = "9223372036854775807"
-         endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "231"
-         endingLineNumber = "231"
-         landmarkName = "SamplerRenderer::Li(const Scene *scene, const RayDifferential &amp;ray, const Sample *sample, RNG &amp;rng, MemoryArena &amp;arena, Intersection *isect, Spectrum *T)"
-         landmarkType = "5">
-      </FileBreakpoint>
-      <FileBreakpoint
-         shouldBeEnabled = "No"
-         ignoreCount = "0"
-         continueAfterRunningActions = "No"
-         filePath = "renderers/samplerrenderer.cpp"
-         timestampString = "431924734.77212"
-         startingColumnNumber = "9223372036854775807"
-         endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "229"
-         endingLineNumber = "229"
-         landmarkName = "SamplerRenderer::Li(const Scene *scene, const RayDifferential &amp;ray, const Sample *sample, RNG &amp;rng, MemoryArena &amp;arena, Intersection *isect, Spectrum *T)"
-         landmarkType = "5">
-      </FileBreakpoint>
-      <FileBreakpoint
-         shouldBeEnabled = "No"
-         ignoreCount = "0"
-         continueAfterRunningActions = "No"
-         filePath = "volumes/homogeneous.cpp"
-         timestampString = "431927228.125291"
-         startingColumnNumber = "9223372036854775807"
-         endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "16"
-         endingLineNumber = "16"
-         landmarkName = "CreateHomogeneousVolumeDensityRegion(const Transform &amp;volume2world, const ParamSet &amp;params)"
+         startingLineNumber = "181"
+         endingLineNumber = "181"
+         landmarkName = "privateLookup(uint32_t nodeNum, const Point &amp;p, LookupProc &amp;process, float &amp;maxDistSquared)"
          landmarkType = "7">
       </FileBreakpoint>
       <FileBreakpoint
-         shouldBeEnabled = "No"
+         shouldBeEnabled = "Yes"
          ignoreCount = "0"
          continueAfterRunningActions = "No"
-         filePath = "integrators/volumephotonmap.cpp"
-         timestampString = "432014866.49673"
+         filePath = "core/vkdtree.h"
+         timestampString = "432249758.732155"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "204"
-         endingLineNumber = "204"
-         landmarkName = "VolumePhotonShootingTask::Run()"
-         landmarkType = "5">
-      </FileBreakpoint>
-      <FileBreakpoint
-         shouldBeEnabled = "No"
-         ignoreCount = "0"
-         continueAfterRunningActions = "No"
-         filePath = "integrators/volumephotonmap.cpp"
-         timestampString = "432014866.49673"
-         startingColumnNumber = "9223372036854775807"
-         endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "210"
-         endingLineNumber = "210"
-         landmarkName = "VolumePhotonShootingTask::Run()"
-         landmarkType = "5">
-      </FileBreakpoint>
-      <FileBreakpoint
-         shouldBeEnabled = "No"
-         ignoreCount = "0"
-         continueAfterRunningActions = "No"
-         filePath = "integrators/volumephotonmap.cpp"
-         timestampString = "432014866.49673"
-         startingColumnNumber = "9223372036854775807"
-         endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "192"
-         endingLineNumber = "192"
-         landmarkName = "VolumePhotonShootingTask::Run()"
-         landmarkType = "5">
-      </FileBreakpoint>
-      <FileBreakpoint
-         shouldBeEnabled = "No"
-         ignoreCount = "0"
-         continueAfterRunningActions = "No"
-         filePath = "integrators/volumephotonmap.cpp"
-         timestampString = "432014866.49673"
-         startingColumnNumber = "9223372036854775807"
-         endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "166"
-         endingLineNumber = "166"
-         landmarkName = "VolumePhotonShootingTask::Run()"
-         landmarkType = "5">
-      </FileBreakpoint>
-      <FileBreakpoint
-         shouldBeEnabled = "No"
-         ignoreCount = "0"
-         continueAfterRunningActions = "No"
-         filePath = "volumes/homogeneous.h"
-         timestampString = "432009473.37389"
-         startingColumnNumber = "9223372036854775807"
-         endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "85"
-         endingLineNumber = "85"
-         landmarkName = "Inside(const Point &amp;p)"
-         landmarkType = "5">
+         startingLineNumber = "164"
+         endingLineNumber = "164"
+         landmarkName = "buildRadii(uint32_t nodeNum, const Point &amp;p, LookupProc &amp;proc, float &amp;maxDistSquared)"
+         landmarkType = "7">
       </FileBreakpoint>
       <FileBreakpoint
          shouldBeEnabled = "Yes"
          ignoreCount = "0"
          continueAfterRunningActions = "No"
-         filePath = "core/volume.h"
-         timestampString = "432009502.483795"
+         filePath = "core/vkdtree.h"
+         timestampString = "432249719.83255"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "100"
-         endingLineNumber = "100"
-         landmarkName = "Inside(const Point &amp;p)"
-         landmarkType = "5">
+         startingLineNumber = "155"
+         endingLineNumber = "155"
+         landmarkName = "buildRadii(uint32_t nodeNum, const Point &amp;p, LookupProc &amp;proc, float &amp;maxDistSquared)"
+         landmarkType = "7">
       </FileBreakpoint>
       <FileBreakpoint
-         shouldBeEnabled = "No"
+         shouldBeEnabled = "Yes"
          ignoreCount = "0"
          continueAfterRunningActions = "No"
-         filePath = "integrators/volumephotonmap.cpp"
-         timestampString = "432014866.49673"
+         filePath = "core/vkdtree.h"
+         timestampString = "432249867.896412"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "209"
-         endingLineNumber = "209"
-         landmarkName = "VolumePhotonShootingTask::Run()"
-         landmarkType = "5">
+         startingLineNumber = "212"
+         endingLineNumber = "212"
+         landmarkName = "privateLookup(uint32_t nodeNum, const Point &amp;p, LookupProc &amp;process, float &amp;maxDistSquared)"
+         landmarkType = "7">
       </FileBreakpoint>
    </FileBreakpoints>
 </Bucket>

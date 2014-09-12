@@ -11,8 +11,8 @@ SurfaceIntegrator "directlighting"
     "integer volumephotons"     [4000]
     "integer finalgathersamples" [0]
     "integer nused" [50]
-    "float maxdist" [2]
-    "float stepsize" [4]
+    "float maxdist" [4]
+    "float stepsize" [5]
 
 WorldBegin
 Translate -1 -1 3

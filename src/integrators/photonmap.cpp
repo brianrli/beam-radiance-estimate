@@ -18,6 +18,7 @@ struct Photon {
     Point p;
     Spectrum alpha;
     Vector wi;
+    float ri;
 };
 
 
@@ -364,7 +365,7 @@ void PhotonIntegrator::Preprocess(const Scene *scene,
         for (uint32_t i = 0; i < radianceTasks.size(); ++i)
             delete radianceTasks[i];
         progRadiance.Done();
-        radianceMap = new KdTree<RadiancePhoton>(radiancePhotons);
+        radianceMap = NULL; //new KdTree<RadiancePhoton>(radiancePhotons);
     }
     delete directMap;
 }

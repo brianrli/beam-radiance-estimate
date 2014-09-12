@@ -417,6 +417,7 @@
 		B1D8ECE2117032E500A8A49E /* pbrt */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = pbrt; sourceTree = BUILT_PRODUCTS_DIR; };
 		C755C03419B929C100E8BE06 /* volumephotonmap.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = volumephotonmap.cpp; sourceTree = "<group>"; };
 		C755C03519B929C100E8BE06 /* volumephotonmap.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = volumephotonmap.h; sourceTree = "<group>"; };
+		C78C479119C36731004FF203 /* vkdtree.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = vkdtree.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -579,6 +580,7 @@
 				B1D8EBB1117030F200A8A49E /* transform.h */,
 				B1D8EBB2117030F200A8A49E /* volume.cpp */,
 				B1D8EBB3117030F200A8A49E /* volume.h */,
+				C78C479119C36731004FF203 /* vkdtree.h */,
 			);
 			path = core;
 			sourceTree = SOURCE_ROOT;
@@ -1135,7 +1137,7 @@
 				B18C76EA1189CC6400AEF213 /* dtrace */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
+			defaultConfigurationName = Debug;
 		};
 		1DEB923508733DC60010E9CD /* Build configuration list for PBXProject "pbrt" */ = {
 			isa = XCConfigurationList;
@@ -1145,7 +1147,7 @@
 				B18C76E91189CC6400AEF213 /* dtrace */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
+			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
 	};

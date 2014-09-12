@@ -9,13 +9,17 @@
 #include "pbrt.h"
 #include "volume.h"
 #include "integrator.h"
-#include "kdtree.h"
+#include "core/vkdtree.h"
 
 struct Photon;
 struct RadiancePhoton;
-struct ClosePhoton;
+
+
+
 struct PhotonProcess;
 struct RadiancePhotonProcess;
+
+struct VPhotonProcess;
 
 
 // PhotonIntegrator Declarations
@@ -25,7 +29,7 @@ public:
     // PhotonIntegrator Public Methods
     
     VolumePhotonIntegrator(int nvol, int nl, int mphodepth, float mdist,
-                           int gs, float ga, float mstep, float steps);
+                           int gs, float ga, float mstep, float steps, float blur);
     
     ~VolumePhotonIntegrator(){}
     
@@ -61,6 +65,7 @@ private:
     float marchStep;
     float stepSize;
     int tauSampleOffset, scatterSampleOffset;
+    float blur; //controls radius size for beam photon
     
     // Declare sample parameters for light source sampling
     LightSampleOffsets *lightSampleOffsets;
@@ -68,7 +73,7 @@ private:
     BSDFSampleOffsets bsdfGatherSampleOffsets, indirGatherSampleOffsets;
     int nVolumePaths;
 
-    KdTree<Photon> *volumeMap;
+    VKdTree<Photon> *volumeMap;
 };
 
 VolumePhotonIntegrator *CreatePhotonMapVolumeIntegrator(const ParamSet &params);

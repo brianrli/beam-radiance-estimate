@@ -10,12 +10,30 @@
 #include "camera.h"
 
 struct Photon {
-    Photon(const Point &pp, const Spectrum &wt, const Vector &w)
-    : p(pp), alpha(wt), wi(w) { }
+    Photon(const Point &pp, const Spectrum &wt, const Vector &w, float n)
+    : p(pp), alpha(wt), wi(w)
+    {
+        ri = 0.f;
+    }
     Photon() { }
     Point p;
     Spectrum alpha;
     Vector wi;
+    float ri;
+};
+
+struct ClosePhoton {
+    
+    // ClosePhoton Public Methods
+    ClosePhoton(const Photon *p = NULL, float md2 = INFINITY)
+    : photon(p), distanceSquared(md2) { }
+    
+    bool operator<(const ClosePhoton &p2) const {
+        return distanceSquared == p2.distanceSquared ?
+        (photon < p2.photon) : (distanceSquared < p2.distanceSquared);
+    }
+    const Photon *photon;
+    float distanceSquared;
 };
 
 struct RadiancePhoton {
@@ -26,6 +44,91 @@ struct RadiancePhoton {
     Normal n;
     Spectrum Lo;
 };
+
+
+
+struct VPhotonProcess {
+	// VPhotonProcess Public Methods
+	VPhotonProcess(u_int mp, const Point &P)
+    : p(P) {
+		photons = 0;
+		nLookup = mp;
+		nfound = 0;
+	}
+    void operator()(const Point &p, const Photon &photon, float dist2, float &maxDistSquared){
+        if (nfound < nLookup) { //still looking
+			// Add photon to unordered array of photons
+			photons[nfound++] = ClosePhoton(&photon, dist2);
+			if (nfound == nLookup) {
+				std::make_heap(&photons[0], &photons[nLookup]);
+				maxDistSquared = photons[0].distanceSquared;
+			}
+		}
+		else {
+			// Remove most distant photon from heap and add new photon
+			std::pop_heap(&photons[0], &photons[nLookup]);
+			photons[nLookup-1] = ClosePhoton(&photon, dist2);
+			std::push_heap(&photons[0], &photons[nLookup]);
+			maxDistSquared = photons[0].distanceSquared;
+		}
+	}
+    void clear(){
+        for (int i = 0; i < nLookup; i++){
+            photons[i] = NULL;
+        }
+    }
+	const Point &p;
+	ClosePhoton *photons;
+	u_int nLookup;
+	mutable u_int nfound;
+};
+
+struct radiiProcess {
+	// VPhotonProcess Public Methods
+	radiiProcess(u_int mp)
+    {
+		photons = 0;
+		nLookup = mp;
+		nfound = 0;
+	}
+    void operator()(const Point &p, const Photon &photon, float dist2, float &maxDistSquared){
+        if (nfound < nLookup) { //still looking
+			// Add photon to unordered array of photons
+			photons[nfound++] = ClosePhoton(&photon, dist2);
+			if (nfound == nLookup) {
+				std::make_heap(&photons[0], &photons[nLookup]);
+				maxDistSquared = photons[0].distanceSquared;
+			}
+		}
+		else {
+			// Remove most distant photon from heap and add new photon
+			std::pop_heap(&photons[0], &photons[nLookup]);
+			photons[nLookup-1] = ClosePhoton(&photon, dist2);
+			std::push_heap(&photons[0], &photons[nLookup]);
+			maxDistSquared = photons[0].distanceSquared;
+		}
+        
+	}
+    void clear(){
+        for (int i = 0; i < nLookup; i++){
+            photons[i] = NULL;
+        }
+        nfound = 0;
+    }
+    float get_radius(){
+        float distance = 0.f;
+        for(int i = 0; i<nfound; i++){
+            if(photons[i].distanceSquared > distance){
+                distance = photons[i].distanceSquared;
+            }
+        }
+        return distance;
+    }
+	ClosePhoton *photons;
+	u_int nLookup;
+	mutable u_int nfound;
+};
+
 
 class VolumePhotonShootingTask : public Task {
 public:
@@ -121,15 +224,17 @@ void VolumePhotonShootingTask::Run() {
             float pdf;
             LightSample ls(u[1], u[2], u[3]);
             Normal Nl;
-            
+
+            //Alpha (VPH)
 //            Spectrum alpha = light->Sample_L(scene, ls, u[4], u[5], time, &photonRay, &Nl, &pdf);
 //            if (pdf == 0.f || alpha.IsBlack()) continue;
 //            alpha /= pdf * lightPdf;
             
+            //Alpha (PBRT)
             Spectrum Le = light->Sample_L(scene, ls, u[4], u[5],
                                           time, &photonRay, &Nl, &pdf);
             if (pdf == 0.f || Le.IsBlack()) continue;
-            Spectrum alpha = (AbsDot(Nl, photonRay.d) * Le) / (pdf * lightPdf);
+            Spectrum alpha = (AbsDot(Nl, photonRay.d) * Le) / (pdf * lightPdf); //initial
 
             if (!alpha.IsBlack()) {
 
@@ -138,7 +243,7 @@ void VolumePhotonShootingTask::Run() {
 
                 Intersection photonIsect;
                 int nIntersections = 0;
-                float vt0, vt1;
+                float vt0, vt1; //ray volume bounds
                 Spectrum oldTransmittance(1.f);
                 
                 //if ray intersects with volume
@@ -146,6 +251,7 @@ void VolumePhotonShootingTask::Run() {
 
                     ++nIntersections;
                     float inVolume = true;
+                    bool firstInteraction = true;
 
                     // Enter volume photon mode till we leave the volumeRegion
                     float u2, u6;
@@ -157,13 +263,17 @@ void VolumePhotonShootingTask::Run() {
                     
                     u2 = (rng.RandomFloat() + 0.5f) * marchstep; //[0,1) + 0.5 * marchstep
                     
-                    if( u2 >= (vt1-vt0)/photonRay.d.Length()){
-                        photonRay.o = volumeRay(vt1+0.00001f);
-                        alpha *= Exp(-volume->tau(volumeRay));
+                    //for debugging purposes
+                    float len = photonRay.d.Length();
+                    float vallen = vt1-vt0;
+
+                    if( u2 >= (vt1-vt0)/photonRay.d.Length()){ //if randomly generated step is larger than 
+//                        photonRay.o = volumeRay(vt1+0.00001f);
+//                        alpha *= Exp(-volume->tau(volumeRay));
                         inVolume = false;
                     }
                     else{
-                        volumeRay.maxt = u2;
+                        volumeRay.maxt = u2; //create a new ray w/in  volume bounds
                     }                    
 
                     while(inVolume)
@@ -178,8 +288,8 @@ void VolumePhotonShootingTask::Run() {
                             Point interactPoint = volumeRay(volumeRay.maxt);
                             
                             // Store a photon
-                            if(!volumeDone){
-                                Photon photon(interactPoint, alpha, volumeRay.d);
+                            if(!volumeDone && !firstInteraction){
+                                Photon photon(interactPoint, alpha, -volumeRay.d,integrator->blur);
                                 localVolumePhotons.push_back(photon);
                                 progress.Update();
                             }
@@ -200,6 +310,7 @@ void VolumePhotonShootingTask::Run() {
                                 u6 = rng.RandomFloat() + 0.5f;
                                 photonRay.maxt = marchstep * u6; //new photonray
                                 
+                                firstInteraction = false; //only use scattered 
                                 if(!volume->Inside(photonRay(photonRay.maxt))){
                                     break;
                                 }
@@ -291,57 +402,22 @@ void VolumePhotonIntegrator::Preprocess(const Scene *scene,
     Mutex::Destroy(mutex);
     progress.Done();
     
+    size_t a = sizeof(Photon); //36 bits
+    size_t c = sizeof(float); //4 bits
     // Build kd-trees for indirect and caustic photons
-    KdTree<Photon> *directMap = NULL;
+    //KdTree<Photon> *directMap = NULL;
 
     if (volumePhotons.size() > 0)
-        volumeMap = new KdTree<Photon>(volumePhotons);
-
-    delete directMap;
+        volumeMap = new VKdTree<Photon>(volumePhotons);
+    
+    //traverse volumeMap, assign valid radius to Photons
+    float maxdist2 = maxDistSquared * 5.f;
+    radiiProcess proc(10); //find N closest
+    proc.photons = (ClosePhoton *)alloca(10 * sizeof(ClosePhoton));
+    volumeMap->buildRadii(0, Point(), proc, maxdist2);
 }
 
-struct ClosePhoton {
-    // ClosePhoton Public Methods
-    ClosePhoton(const Photon *p = NULL, float md2 = INFINITY)
-    : photon(p), distanceSquared(md2) { }
-    bool operator<(const ClosePhoton &p2) const {
-        return distanceSquared == p2.distanceSquared ?
-        (photon < p2.photon) : (distanceSquared < p2.distanceSquared);
-    }
-    const Photon *photon;
-    float distanceSquared;
-};
 
-struct VPhotonProcess {
-	// VPhotonProcess Public Methods
-	VPhotonProcess(u_int mp, const Point &P)
-    : p(P) {
-		photons = 0;
-		nLookup = mp;
-		nfound = 0;
-	}
-    void operator()(const Point &p, const Photon &photon, float dist2, float &maxDistSquared){
-        if (nfound < nLookup) {
-			// Add photon to unordered array of photons
-			photons[nfound++] = ClosePhoton(&photon, dist2);
-			if (nfound == nLookup) {
-				std::make_heap(&photons[0], &photons[nLookup]);
-				maxDistSquared = photons[0].distanceSquared;
-			}
-		}
-		else {
-			// Remove most distant photon from heap and add new photon
-			std::pop_heap(&photons[0], &photons[nLookup]);
-			photons[nLookup-1] = ClosePhoton(&photon, dist2);
-			std::push_heap(&photons[0], &photons[nLookup]);
-			maxDistSquared = photons[0].distanceSquared;
-		}
-	}
-	const Point &p;
-	ClosePhoton *photons;
-	u_int nLookup;
-	mutable u_int nfound;
-};
 
 void VolumePhotonIntegrator::RequestSamples(Sampler *sampler, Sample *sample,
                                         const Scene *scene) {
@@ -379,8 +455,8 @@ Spectrum VolumePhotonIntegrator::Li(const Scene *scene,
 
 	// Pointers assignment
 	VolumeRegion *vr = scene->volumeRegion;
-	KdTree<Photon> *map = volumeMap;
-
+	VKdTree<Photon> *map = volumeMap;
+    
 	if(!map){
 		Error("Volume photon map is not initialized");
 		exit(1);
@@ -460,7 +536,8 @@ Spectrum VolumePhotonIntegrator::Li(const Scene *scene,
 
 // PhotonIntegrator Method Definitions
 VolumePhotonIntegrator::VolumePhotonIntegrator(int nvol, int nl, int mphodepth,
-                                               float mdist, int gs, float ga, float mstep, float steps)
+                                               float mdist, int gs, float ga, float mstep, float steps,
+                                               float blr)
 {
     nLookup = nl;
     maxPhotonDepth = mphodepth;
@@ -473,6 +550,7 @@ VolumePhotonIntegrator::VolumePhotonIntegrator(int nvol, int nl, int mphodepth,
     nVolumePhotonsWanted = nvol;
     marchStep = mstep;
     stepSize = steps;
+    blur = blr;
 }
 
 VolumePhotonIntegrator *CreatePhotonMapVolumeIntegrator(const ParamSet &params) {
@@ -486,11 +564,12 @@ VolumePhotonIntegrator *CreatePhotonMapVolumeIntegrator(const ParamSet &params) 
     
     //new parameters
     int nVolume = params.FindOneInt("volumephotons", 100000);
-    float marchStep = params.FindOneFloat("marchstep", 4.0f);
+    float marchStep = params.FindOneFloat("marchstep", 2.0f);
     float stepSize  = params.FindOneFloat("stepsize", 4.f);
+    float blur = params.FindOneFloat("blur", 4.f);
 
     return new VolumePhotonIntegrator(nVolume, nUsed, maxPhotonDepth, maxDist, gatherSamples,
-                                      gatherAngle, marchStep, stepSize);
+                                      gatherAngle, marchStep, stepSize,blur);
 }
 
 
