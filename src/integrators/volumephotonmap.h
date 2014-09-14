@@ -6,20 +6,26 @@
 #define PBRT_INTEGRATORS_VOLUMEPHOTONMAP_H
 
 // integrators/photonmap.h*
-#include "pbrt.h"
+//#include "pbrt.h"
 #include "volume.h"
 #include "integrator.h"
-#include "core/vkdtree.h"
+//#include "core/vkdtree.h"
+//#include "core/vbvh.h"
 
+//Photon Structs
 struct Photon;
 struct RadiancePhoton;
-
-
-
 struct PhotonProcess;
 struct RadiancePhotonProcess;
-
 struct VPhotonProcess;
+
+//VKdTree
+class VKdTree;
+
+//VBVH Structs
+struct VBVHBuildNode;
+struct VBVHPrimitiveInfo;
+struct LinearVBVHNode;
 
 
 // PhotonIntegrator Declarations
@@ -73,8 +79,44 @@ private:
     BSDFSampleOffsets bsdfGatherSampleOffsets, indirGatherSampleOffsets;
     int nVolumePaths;
 
-    VKdTree<Photon> *volumeMap;
+    VKdTree *volumeMap;
 };
+
+class VBVHAccel
+{
+public:
+    // VBVHAccel Public Methods
+    VBVHAccel(const vector<Reference<Photon> > &p, uint32_t maxPrims = 1);
+    
+    BBox WorldBound() const;
+    
+    bool CanIntersect() const { return true; }
+    
+    ~VBVHAccel();
+    
+    bool Intersect(const Ray &ray, Intersection *isect) const;
+    
+    bool IntersectP(const Ray &ray) const;
+private:
+    // VBVHAccel Private Methods
+    VBVHBuildNode *recursiveBuild(MemoryArena &buildArena,
+                                  vector<VBVHPrimitiveInfo> &buildData, uint32_t start, uint32_t end,
+                                  uint32_t *totalNodes, vector<Reference<Primitive> > &orderedPrims);
+    
+    uint32_t flattenVBVHTree(VBVHBuildNode *node, uint32_t *offset);
+    
+    // VBVHAccel Private Data
+    uint32_t maxPrimsInNode;
+    enum SplitMethod { SPLIT_MIDDLE, SPLIT_EQUAL_COUNTS, SPLIT_SAH };
+    SplitMethod splitMethod;
+    vector<Reference<Primitive> > primitives;
+    LinearVBVHNode *nodes;
+};
+
+
+VBVHAccel *CreateVBVHAccelerator(const vector<Reference<Primitive> > &prims,
+                                 const ParamSet &ps);
+
 
 VolumePhotonIntegrator *CreatePhotonMapVolumeIntegrator(const ParamSet &params);
 

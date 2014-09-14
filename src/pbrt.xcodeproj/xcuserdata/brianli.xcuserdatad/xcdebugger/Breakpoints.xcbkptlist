@@ -7,65 +7,48 @@
          shouldBeEnabled = "No"
          ignoreCount = "0"
          continueAfterRunningActions = "No"
-         filePath = "core/vkdtree.h"
-         timestampString = "432249758.732155"
+         filePath = "core/memory.h"
+         timestampString = "432354767.981655"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "163"
-         endingLineNumber = "163"
-         landmarkName = "buildRadii(uint32_t nodeNum, const Point &amp;p, LookupProc &amp;proc, float &amp;maxDistSquared)"
+         startingLineNumber = "92"
+         endingLineNumber = "92"
+         landmarkName = "AllocAligned(uint32_t count)"
          landmarkType = "7">
       </FileBreakpoint>
       <FileBreakpoint
          shouldBeEnabled = "No"
          ignoreCount = "0"
          continueAfterRunningActions = "No"
-         filePath = "core/vkdtree.h"
-         timestampString = "432249758.732155"
+         filePath = "core/memory.h"
+         timestampString = "432354767.981655"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "181"
-         endingLineNumber = "181"
-         landmarkName = "privateLookup(uint32_t nodeNum, const Point &amp;p, LookupProc &amp;process, float &amp;maxDistSquared)"
-         landmarkType = "7">
+         startingLineNumber = "91"
+         endingLineNumber = "91">
       </FileBreakpoint>
       <FileBreakpoint
-         shouldBeEnabled = "Yes"
+         shouldBeEnabled = "No"
          ignoreCount = "0"
          continueAfterRunningActions = "No"
-         filePath = "core/vkdtree.h"
-         timestampString = "432249758.732155"
+         filePath = "core/memory.h"
+         timestampString = "432354767.981655"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "164"
-         endingLineNumber = "164"
-         landmarkName = "buildRadii(uint32_t nodeNum, const Point &amp;p, LookupProc &amp;proc, float &amp;maxDistSquared)"
-         landmarkType = "7">
+         startingLineNumber = "91"
+         endingLineNumber = "91">
       </FileBreakpoint>
       <FileBreakpoint
-         shouldBeEnabled = "Yes"
+         shouldBeEnabled = "No"
          ignoreCount = "0"
          continueAfterRunningActions = "No"
-         filePath = "core/vkdtree.h"
-         timestampString = "432249719.83255"
+         filePath = "core/memory.h"
+         timestampString = "432354774.796676"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "155"
-         endingLineNumber = "155"
-         landmarkName = "buildRadii(uint32_t nodeNum, const Point &amp;p, LookupProc &amp;proc, float &amp;maxDistSquared)"
-         landmarkType = "7">
-      </FileBreakpoint>
-      <FileBreakpoint
-         shouldBeEnabled = "Yes"
-         ignoreCount = "0"
-         continueAfterRunningActions = "No"
-         filePath = "core/vkdtree.h"
-         timestampString = "432249867.896412"
-         startingColumnNumber = "9223372036854775807"
-         endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "212"
-         endingLineNumber = "212"
-         landmarkName = "privateLookup(uint32_t nodeNum, const Point &amp;p, LookupProc &amp;process, float &amp;maxDistSquared)"
+         startingLineNumber = "96"
+         endingLineNumber = "96"
+         landmarkName = "VAllocAligned(uint32_t count)"
          landmarkType = "7">
       </FileBreakpoint>
    </FileBreakpoints>

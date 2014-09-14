@@ -19,8 +19,206 @@ struct Photon {
     Point p;
     Spectrum alpha;
     Vector wi;
+    
+    //bbh+per photon radius
     float ri;
+    BBox bound;
 };
+
+
+// VKdTree Declarations
+struct VKdNode {
+    
+    void init(float p, uint32_t a) {
+        splitPos = p;
+        splitAxis = a;
+        rightChild = (1<<29)-1;
+        hasLeftChild = 0;
+    }
+    
+    void initLeaf() {
+        splitAxis = 3;
+        rightChild = (1<<29)-1;
+        hasLeftChild = 0;
+    }
+    
+    // VKdNode Data
+    float splitPos;
+    uint32_t splitAxis:2; //2 bits
+    uint32_t hasLeftChild:1, rightChild:29; //30 bits
+};
+
+
+class VKdTree {
+public:
+    // VKdTree Public Methods
+    VKdTree(const vector<Photon> &data);
+    ~VKdTree() {
+        FreeAligned(nodes);
+        FreeAligned(photon);
+    }
+    template <typename LookupProc> void Lookup(const Point &p,
+                                               LookupProc &process, float &maxDistSquared) const;
+    
+    template <typename LookupProc> void buildRadii(uint32_t nodeNum,
+                                                   const Point &p, LookupProc &proc, float &maxDistSquared);
+private:
+    // VKdTree Private Methods
+    void recursiveBuild(uint32_t nodeNum, int start, int end,
+                        const Photon **buildNodes);
+    
+    template <typename LookupProc> void privateLookup(uint32_t nodeNum,
+                                                      const Point &p, LookupProc &process, float &maxDistSquared) const;
+    
+    template <typename LookupProc> void radiusLookup(uint32_t nodeNum,
+                                                     const Point &p, LookupProc &process, float &maxDistSquared) const;
+    
+    // VKdTree Private Data
+    VKdNode *nodes;
+    Photon *photon;
+    uint32_t nNodes, nextFreeNode;
+};
+
+
+struct VCompareNode {
+    VCompareNode(int a) { axis = a; }
+    int axis;
+    bool operator()(const Photon *d1, const Photon *d2) const {
+        return d1->p[axis] == d2->p[axis] ? (d1 < d2) :
+        d1->p[axis] < d2->p[axis];
+    }
+};
+
+
+// VKdTree Method Definitions
+VKdTree::VKdTree(const vector<Photon> &d) {
+    
+    nNodes = d.size();
+    nextFreeNode = 1;
+    
+    nodes = VAllocAligned<VKdNode>(nNodes);
+    photon = VAllocAligned<Photon>(nNodes);
+    
+    vector<const Photon *> buildNodes(nNodes, NULL);
+    
+    for (uint32_t i = 0; i < nNodes; ++i)
+        buildNodes[i] = &d[i];
+    
+    // Begin the VKdTree building process
+    recursiveBuild(0, 0, nNodes, &buildNodes[0]);
+}
+
+
+void VKdTree::recursiveBuild(uint32_t nodeNum, int start, int end,
+                             const Photon **buildNodes) {
+    // Create leaf node of VKd-tree if we've reached the bottom
+    if (start + 1 == end) {
+        nodes[nodeNum].initLeaf();
+        photon[nodeNum] = *buildNodes[start];
+        return;
+    }
+    
+    // Choose split direction and partition data
+    
+    // Compute bounds of data from _start_ to _end_
+    BBox bound;
+    for (int i = start; i < end; ++i)
+        bound = Union(bound, buildNodes[i]->p);
+    int splitAxis = bound.MaximumExtent();
+    int splitPos = (start+end)/2;
+    std::nth_element(&buildNodes[start], &buildNodes[splitPos],
+                     &buildNodes[end], VCompareNode(splitAxis));
+    
+    // Allocate VKd-tree node and continue recursively
+    nodes[nodeNum].init(buildNodes[splitPos]->p[splitAxis], splitAxis);
+    photon[nodeNum] = *buildNodes[splitPos];
+    if (start < splitPos) {
+        nodes[nodeNum].hasLeftChild = 1;
+        uint32_t childNum = nextFreeNode++;
+        recursiveBuild(childNum, start, splitPos, buildNodes);
+    }
+    if (splitPos+1 < end) {
+        nodes[nodeNum].rightChild = nextFreeNode++;
+        recursiveBuild(nodes[nodeNum].rightChild, splitPos+1,
+                       end, buildNodes);
+    }
+}
+
+
+template <typename LookupProc>
+void VKdTree::Lookup(const Point &p, LookupProc &proc,
+                     float &maxDistSquared) const {
+    privateLookup(0, p, proc, maxDistSquared);
+}
+
+//In charge of building Radii
+template <typename LookupProc>
+void VKdTree::buildRadii(uint32_t nodeNum, const Point &p, LookupProc &proc,
+                         float &maxDistSquared){
+    VKdNode *node = &nodes[nodeNum];
+    float dist2 = maxDistSquared;
+    
+    int axis = node->splitAxis;
+    
+    if (axis != 3) {
+        //compute m at a given node, distance to the m closest photon
+        privateLookup(0, photon[nodeNum].p, proc, dist2);
+        photon[nodeNum].ri = max(sqrtf(dist2),sqrtf(proc.get_radius()))
+        * powf((float)proc.nLookup,0.333333333333333333f);
+        
+        Photon ndata = photon[nodeNum];
+        
+        proc.clear(); //perhaps not the most efficient
+        
+        if (node->hasLeftChild)
+            buildRadii(nodeNum+1, p, proc, maxDistSquared);
+        
+        proc.clear();
+        
+        if (node->rightChild < nNodes)
+            buildRadii(node->rightChild, p, proc, maxDistSquared);
+    }
+}
+
+
+template <typename LookupProc>
+void VKdTree::privateLookup(uint32_t nodeNum, const Point &p,
+                            LookupProc &process, float &maxDistSquared) const {
+    VKdNode *node = &nodes[nodeNum];
+    // Process VKd-tree node's children
+    int axis = node->splitAxis;
+    
+    if (axis != 3) {
+        
+        //distance squared from point to photon
+        float dist2 = (p[axis] - node->splitPos) * (p[axis] - node->splitPos);
+        
+        if (p[axis] <= node->splitPos) { //below split position
+            if (node->hasLeftChild)
+                privateLookup(nodeNum+1, p, process, maxDistSquared);
+            
+            if (dist2 < maxDistSquared && node->rightChild < nNodes)
+                privateLookup(node->rightChild, p, process, maxDistSquared);
+        }
+        else {
+            if (node->rightChild < nNodes)
+                privateLookup(node->rightChild, p, process, maxDistSquared);
+            
+            if (dist2 < maxDistSquared && node->hasLeftChild)
+                privateLookup(nodeNum+1, p, process, maxDistSquared);
+        }
+    }
+    
+    
+    // Hand VKd-tree node to processing function
+    float dist2 = DistanceSquared(photon[nodeNum].p, p);
+    
+    if (dist2 < maxDistSquared && (p!=photon[nodeNum].p)) //except same
+        process(p, photon[nodeNum], dist2, maxDistSquared);
+}
+
+
+
 
 struct ClosePhoton {
     
@@ -45,8 +243,6 @@ struct RadiancePhoton {
     Spectrum Lo;
 };
 
-
-
 struct VPhotonProcess {
 	// VPhotonProcess Public Methods
 	VPhotonProcess(u_int mp, const Point &P)
@@ -56,58 +252,22 @@ struct VPhotonProcess {
 		nfound = 0;
 	}
     void operator()(const Point &p, const Photon &photon, float dist2, float &maxDistSquared){
-        if (nfound < nLookup) { //still looking
-			// Add photon to unordered array of photons
-			photons[nfound++] = ClosePhoton(&photon, dist2);
-			if (nfound == nLookup) {
-				std::make_heap(&photons[0], &photons[nLookup]);
-				maxDistSquared = photons[0].distanceSquared;
-			}
-		}
-		else {
-			// Remove most distant photon from heap and add new photon
-			std::pop_heap(&photons[0], &photons[nLookup]);
-			photons[nLookup-1] = ClosePhoton(&photon, dist2);
-			std::push_heap(&photons[0], &photons[nLookup]);
-			maxDistSquared = photons[0].distanceSquared;
-		}
-	}
-    void clear(){
-        for (int i = 0; i < nLookup; i++){
-            photons[i] = NULL;
-        }
-    }
-	const Point &p;
-	ClosePhoton *photons;
-	u_int nLookup;
-	mutable u_int nfound;
-};
-
-struct radiiProcess {
-	// VPhotonProcess Public Methods
-	radiiProcess(u_int mp)
-    {
-		photons = 0;
-		nLookup = mp;
-		nfound = 0;
-	}
-    void operator()(const Point &p, const Photon &photon, float dist2, float &maxDistSquared){
-        if (nfound < nLookup) { //still looking
-			// Add photon to unordered array of photons
-			photons[nfound++] = ClosePhoton(&photon, dist2);
-			if (nfound == nLookup) {
-				std::make_heap(&photons[0], &photons[nLookup]);
-				maxDistSquared = photons[0].distanceSquared;
-			}
-		}
-		else {
-			// Remove most distant photon from heap and add new photon
-			std::pop_heap(&photons[0], &photons[nLookup]);
-			photons[nLookup-1] = ClosePhoton(&photon, dist2);
-			std::push_heap(&photons[0], &photons[nLookup]);
-			maxDistSquared = photons[0].distanceSquared;
-		}
         
+        if (nfound < nLookup) { //still looking
+			// Add photon to unordered array of photons
+			photons[nfound++] = ClosePhoton(&photon, dist2);
+			if (nfound == nLookup) {
+				std::make_heap(&photons[0], &photons[nLookup]);
+				maxDistSquared = photons[0].distanceSquared;
+			}
+		}
+		else {
+			// Remove most distant photon from heap and add new photon
+			std::pop_heap(&photons[0], &photons[nLookup]);
+			photons[nLookup-1] = ClosePhoton(&photon, dist2);
+			std::push_heap(&photons[0], &photons[nLookup]);
+			maxDistSquared = photons[0].distanceSquared;
+		}
 	}
     void clear(){
         for (int i = 0; i < nLookup; i++){
@@ -124,6 +284,7 @@ struct radiiProcess {
         }
         return distance;
     }
+	const Point &p;
 	ClosePhoton *photons;
 	u_int nLookup;
 	mutable u_int nfound;
@@ -225,11 +386,6 @@ void VolumePhotonShootingTask::Run() {
             LightSample ls(u[1], u[2], u[3]);
             Normal Nl;
 
-            //Alpha (VPH)
-//            Spectrum alpha = light->Sample_L(scene, ls, u[4], u[5], time, &photonRay, &Nl, &pdf);
-//            if (pdf == 0.f || alpha.IsBlack()) continue;
-//            alpha /= pdf * lightPdf;
-            
             //Alpha (PBRT)
             Spectrum Le = light->Sample_L(scene, ls, u[4], u[5],
                                           time, &photonRay, &Nl, &pdf);
@@ -264,8 +420,6 @@ void VolumePhotonShootingTask::Run() {
                     u2 = (rng.RandomFloat() + 0.5f) * marchstep; //[0,1) + 0.5 * marchstep
                     
                     //for debugging purposes
-                    float len = photonRay.d.Length();
-                    float vallen = vt1-vt0;
 
                     if( u2 >= (vt1-vt0)/photonRay.d.Length()){ //if randomly generated step is larger than 
 //                        photonRay.o = volumeRay(vt1+0.00001f);
@@ -402,19 +556,15 @@ void VolumePhotonIntegrator::Preprocess(const Scene *scene,
     Mutex::Destroy(mutex);
     progress.Done();
     
-    size_t a = sizeof(Photon); //36 bits
-    size_t c = sizeof(float); //4 bits
-    // Build kd-trees for indirect and caustic photons
-    //KdTree<Photon> *directMap = NULL;
-
-    if (volumePhotons.size() > 0)
-        volumeMap = new VKdTree<Photon>(volumePhotons);
+    if (volumePhotons.size() > 0){
+        volumeMap = new VKdTree(volumePhotons);
     
-    //traverse volumeMap, assign valid radius to Photons
-    float maxdist2 = maxDistSquared * 5.f;
-    radiiProcess proc(10); //find N closest
-    proc.photons = (ClosePhoton *)alloca(10 * sizeof(ClosePhoton));
-    volumeMap->buildRadii(0, Point(), proc, maxdist2);
+        //traverse volumeMap, assign valid radius to Photons
+        float maxdist2 = maxDistSquared * 5.f;
+        VPhotonProcess proc(10,Point()); //find m closest
+        proc.photons = (ClosePhoton *)alloca(10 * sizeof(ClosePhoton));
+        volumeMap->buildRadii(0, Point(), proc, maxdist2);
+    }
 }
 
 
@@ -455,7 +605,7 @@ Spectrum VolumePhotonIntegrator::Li(const Scene *scene,
 
 	// Pointers assignment
 	VolumeRegion *vr = scene->volumeRegion;
-	VKdTree<Photon> *map = volumeMap;
+	VKdTree *map = volumeMap;
     
 	if(!map){
 		Error("Volume photon map is not initialized");

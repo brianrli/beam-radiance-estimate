@@ -7,7 +7,24 @@
 // core/VKdtree.h*
 #include "pbrt.h"
 #include "geometry.h"
-#include "integrators/volumephotonmap.h"
+
+
+struct Photon {
+    Photon(const Point &pp, const Spectrum &wt, const Vector &w, float n)
+    : p(pp), alpha(wt), wi(w)
+    {
+        ri = 0.f;
+    }
+    Photon() { }
+    Point p;
+    Spectrum alpha;
+    Vector wi;
+    
+    //bbh+per photon radius
+    float ri;
+    BBox bound;
+};
+
 
 // VKdTree Declarations
 struct VKdNode {
@@ -32,13 +49,13 @@ struct VKdNode {
 };
 
 
-template <typename NodeData> class VKdTree {
+class VKdTree {
 public:
     // VKdTree Public Methods
-    VKdTree(const vector<NodeData> &data);
+    VKdTree(const vector<Photon> &data);
     ~VKdTree() {
         FreeAligned(nodes); 
-        FreeAligned(nodeData);
+        FreeAligned(photon);
     }
     template <typename LookupProc> void Lookup(const Point &p,
                                                LookupProc &process, float &maxDistSquared) const;
@@ -48,7 +65,7 @@ public:
 private:
     // VKdTree Private Methods
     void recursiveBuild(uint32_t nodeNum, int start, int end,
-                        const NodeData **buildNodes);
+                        const Photon **buildNodes);
     
     template <typename LookupProc> void privateLookup(uint32_t nodeNum,
                                                       const Point &p, LookupProc &process, float &maxDistSquared) const;
@@ -58,15 +75,15 @@ private:
     
     // VKdTree Private Data
     VKdNode *nodes;
-    NodeData *nodeData;
+    Photon *photon;
     uint32_t nNodes, nextFreeNode;
 };
 
 
-template <typename NodeData> struct VCompareNode {
+template <typename Photon> struct VCompareNode {
     VCompareNode(int a) { axis = a; }
     int axis;
-    bool operator()(const NodeData *d1, const NodeData *d2) const {
+    bool operator()(const Photon *d1, const Photon *d2) const {
         return d1->p[axis] == d2->p[axis] ? (d1 < d2) :
         d1->p[axis] < d2->p[axis];
     }
@@ -74,15 +91,14 @@ template <typename NodeData> struct VCompareNode {
 
 
 // VKdTree Method Definitions
-template <typename NodeData>
-VKdTree<NodeData>::VKdTree(const vector<NodeData> &d) {
+VKdTree::VKdTree(const vector<Photon> &d) {
     
     nNodes = d.size();
     nextFreeNode = 1;
 
-    nodes = AllocAligned<VKdNode>(nNodes);
-    nodeData = AllocAligned<NodeData>(nNodes);
-    vector<const NodeData *> buildNodes(nNodes, NULL);
+    nodes = VAllocAligned<VKdNode>(nNodes);
+    photon = VAllocAligned<Photon>(nNodes);
+    vector<const Photon *> buildNodes(nNodes, NULL);
     
     for (uint32_t i = 0; i < nNodes; ++i)
         buildNodes[i] = &d[i];
@@ -92,13 +108,12 @@ VKdTree<NodeData>::VKdTree(const vector<NodeData> &d) {
 }
 
 
-template <typename NodeData> void
-VKdTree<NodeData>::recursiveBuild(uint32_t nodeNum, int start, int end,
-                                 const NodeData **buildNodes) {
+void VKdTree::recursiveBuild(uint32_t nodeNum, int start, int end,
+                                 const Photon **buildNodes) {
     // Create leaf node of VKd-tree if we've reached the bottom
     if (start + 1 == end) {
         nodes[nodeNum].initLeaf();
-        nodeData[nodeNum] = *buildNodes[start];
+        photon[nodeNum] = *buildNodes[start];
         return;
     }
     
@@ -111,11 +126,11 @@ VKdTree<NodeData>::recursiveBuild(uint32_t nodeNum, int start, int end,
     int splitAxis = bound.MaximumExtent();
     int splitPos = (start+end)/2;
     std::nth_element(&buildNodes[start], &buildNodes[splitPos],
-                     &buildNodes[end], VCompareNode<NodeData>(splitAxis));
+                     &buildNodes[end], VCompareNode<Photon>(splitAxis));
     
     // Allocate VKd-tree node and continue recursively
     nodes[nodeNum].init(buildNodes[splitPos]->p[splitAxis], splitAxis);
-    nodeData[nodeNum] = *buildNodes[splitPos];
+    photon[nodeNum] = *buildNodes[splitPos];
     if (start < splitPos) {
         nodes[nodeNum].hasLeftChild = 1;
         uint32_t childNum = nextFreeNode++;
@@ -129,37 +144,28 @@ VKdTree<NodeData>::recursiveBuild(uint32_t nodeNum, int start, int end,
 }
 
 
-template <typename NodeData> template <typename LookupProc>
-void VKdTree<NodeData>::Lookup(const Point &p, LookupProc &proc,
+template <typename LookupProc>
+void VKdTree::Lookup(const Point &p, LookupProc &proc,
                               float &maxDistSquared) const {
     privateLookup(0, p, proc, maxDistSquared);
 }
 
 //In charge of building Radii
-template <typename NodeData> template <typename LookupProc>
-void VKdTree<NodeData>::buildRadii(uint32_t nodeNum, const Point &p, LookupProc &proc,
+template <typename LookupProc>
+void VKdTree::buildRadii(uint32_t nodeNum, const Point &p, LookupProc &proc,
                                   float &maxDistSquared){
     VKdNode *node = &nodes[nodeNum];
-    u_int sweg = proc.nfound;
     float dist2 = maxDistSquared;
     
     int axis = node->splitAxis;
     
     if (axis != 3) {
         //compute m at a given node, distance to the m closest photon
-        privateLookup(0, nodeData[nodeNum].p, proc, dist2);
+        privateLookup(0, photon[nodeNum].p, proc, dist2);
+        photon[nodeNum].ri = max(sqrtf(dist2),sqrtf(proc.get_radius()))
+            * powf((float)proc.nLookup,0.333333333333333333f);
         
-        if(dist2==0.f){
-            for (int i = 0; i < proc.nfound; i++){
-                float a = proc.photons[i].distanceSquared;
-                int b = 3;
-            }
-        }
-        
-        nodeData[nodeNum].ri = max(sqrtf(dist2),sqrtf(proc.get_radius()))
-            * powf((float)proc.nLookup,0.16666666666f);
-        
-        NodeData ndata = nodeData[nodeNum];
+        Photon ndata = photon[nodeNum];
         
         proc.clear(); //perhaps not the most efficient
         
@@ -174,12 +180,10 @@ void VKdTree<NodeData>::buildRadii(uint32_t nodeNum, const Point &p, LookupProc 
 }
 
 
-template <typename NodeData> template <typename LookupProc>
-void VKdTree<NodeData>::privateLookup(uint32_t nodeNum, const Point &p,
+template <typename LookupProc>
+void VKdTree::privateLookup(uint32_t nodeNum, const Point &p,
                                      LookupProc &process, float &maxDistSquared) const {
-    
     VKdNode *node = &nodes[nodeNum];
-    
     // Process VKd-tree node's children
     int axis = node->splitAxis;
     
@@ -187,7 +191,7 @@ void VKdTree<NodeData>::privateLookup(uint32_t nodeNum, const Point &p,
         
         //distance squared from point to photon
         float dist2 = (p[axis] - node->splitPos) * (p[axis] - node->splitPos);
-        
+
         if (p[axis] <= node->splitPos) { //below split position
             if (node->hasLeftChild)
                 privateLookup(nodeNum+1, p, process, maxDistSquared);
@@ -206,13 +210,9 @@ void VKdTree<NodeData>::privateLookup(uint32_t nodeNum, const Point &p,
     
     
     // Hand VKd-tree node to processing function
-
-    float dist2 = DistanceSquared(nodeData[nodeNum].p, p);
-    if(dist2==0){
-        int a = 3;
-    }
-
-    if (dist2 < maxDistSquared)
-        process(p, nodeData[nodeNum], dist2, maxDistSquared);
+    float dist2 = DistanceSquared(photon[nodeNum].p, p);
+    
+    if (dist2 < maxDistSquared && (p!=photon[nodeNum].p)) //except same
+        process(p, photon[nodeNum], dist2, maxDistSquared);
 }
 

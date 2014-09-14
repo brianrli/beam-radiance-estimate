@@ -91,7 +91,10 @@ void *AllocAligned(size_t size);
 template <typename T> T *AllocAligned(uint32_t count) {
     return (T *)AllocAligned(count * sizeof(T));
 }
-
+//because fucking allocaligned doesnt wanna give me the right fucking size
+template <typename T> T *VAllocAligned(uint32_t count) {
+    return (T *)AllocAligned(count * (size_t)64);
+}
 
 void FreeAligned(void *);
 class MemoryArena {

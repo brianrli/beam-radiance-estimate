@@ -418,6 +418,8 @@
 		C755C03419B929C100E8BE06 /* volumephotonmap.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = volumephotonmap.cpp; sourceTree = "<group>"; };
 		C755C03519B929C100E8BE06 /* volumephotonmap.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = volumephotonmap.h; sourceTree = "<group>"; };
 		C78C479119C36731004FF203 /* vkdtree.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = vkdtree.h; sourceTree = "<group>"; };
+		C78C479219C4EF90004FF203 /* vbvh.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = vbvh.cpp; sourceTree = "<group>"; };
+		C78C479319C4EF90004FF203 /* vbvh.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = vbvh.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -499,6 +501,8 @@
 		B1D8EB67117030F200A8A49E /* core */ = {
 			isa = PBXGroup;
 			children = (
+				C78C479219C4EF90004FF203 /* vbvh.cpp */,
+				C78C479319C4EF90004FF203 /* vbvh.h */,
 				B13B5763161245F5008FFA44 /* targa.c */,
 				B13B5764161245F5008FFA44 /* targa.h */,
 				B130248C1236EE5100206AC7 /* fileutil.cpp */,
