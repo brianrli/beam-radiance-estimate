@@ -180,7 +180,7 @@ BVHBuildNode *BVHAccel::recursiveBuild(MemoryArena &buildArena,
         uint32_t end, uint32_t *totalNodes,
         vector<Reference<Primitive> > &orderedPrims) {
     Assert(start != end);
-    (*totalNodes)++;
+    (*totalNodes)++; //might need this
     BVHBuildNode *node = buildArena.Alloc<BVHBuildNode>();
     
     // Compute bounds of all primitives in BVH node

@@ -50,6 +50,7 @@ struct VKdNode {
 
 
 class VKdTree {
+    friend class VBVHAccel; //can access VKdTree private
 public:
     // VKdTree Public Methods
     VKdTree(const vector<Photon> &data);
@@ -218,6 +219,75 @@ void VKdTree::privateLookup(uint32_t nodeNum, const Point &p,
 }
 
 
+struct VBVHBuildNode {
+    // BVHBuildNode Public Methods
+    VBVHBuildNode() { children[0] = children[1] = NULL; }
+    void InitLeaf(uint32_t first, uint32_t n, const BBox &b) {
+        firstPrimOffset = first;
+        nPrimitives = n;
+    }
+    void InitInterior(uint32_t axis, VBVHBuildNode *c0, VBVHBuildNode *c1) {
+        children[0] = c0;
+        children[1] = c1;
+
+        if(c1 != NULL)
+            photon.bound = Union(c1->photon.bound,photon.bound);
+        if(c0 != NULL)
+            photon.bound = Union(c0->photon.bound,photon.bound);
+
+        splitAxis = axis;
+        nPrimitives = 1;
+    }
+    Photon photon;
+    VBVHBuildNode *children[2];
+    uint32_t splitAxis, firstPrimOffset, nPrimitives;
+};
+
+//rapid construction scheme
+VBVHBuildNode* VBVHAccel::recursiveBuild(MemoryArena &buildArena, VKdTree &volumemap, uint32_t nodenum, uint32_t *totalNodes){
+
+     (*totalNodes)++;
+    VBVHBuildNode *node = buildArena.Alloc<VBVHBuildNode>();
+    node->photon = volumemap.photon[nodenum];
+//  Bounding box given point and radius
+    node->photon.bound = BBox(node->photon.p);
+    node->photon.bound.Expand(node->photon.ri);
+
+    VKdNode *kdnode = &volumemap.nodes[nodenum];
+    
+    VBVHBuildNode *leftchild = NULL;
+    VBVHBuildNode *rightchild = NULL;
+    
+//  if hasleftchild
+    if(kdnode->hasLeftChild){
+        leftchild = recursiveBuild(buildArena, volumemap, nodenum+1,totalNodes);
+    }
+    
+//  if has rightchild
+    if(kdnode->rightChild < volumemap.nNodes){
+        rightchild = recursiveBuild(buildArena, volumemap, kdnode->rightChild,totalNodes);
+    }
+    
+    node->InitInterior(kdnode->splitAxis,leftchild, rightchild);
+    return node;
+}
+
+VBVHAccel::VBVHAccel(VKdTree &volumemap) {
+
+    // Recursively build BVH tree for primitives
+    MemoryArena buildArena;
+    uint32_t totalNodes = 0;
+    VBVHBuildNode *root = recursiveBuild(buildArena, volumemap, 0, &totalNodes);
+    int check = 0;
+    
+    // Compute representation of depth-first traversal of BVH tree
+//    nodes = AllocAligned<LinearVBVHNode>(totalNodes);
+//    for (uint32_t i = 0; i < totalNodes; ++i)
+//        new (&nodes[i]) LinearBVHNode;
+//    uint32_t offset = 0;
+//    flattenBVHTree(root, &offset);
+//    Assert(offset == totalNodes);
+}
 
 
 struct ClosePhoton {
@@ -564,6 +634,8 @@ void VolumePhotonIntegrator::Preprocess(const Scene *scene,
         VPhotonProcess proc(10,Point()); //find m closest
         proc.photons = (ClosePhoton *)alloca(10 * sizeof(ClosePhoton));
         volumeMap->buildRadii(0, Point(), proc, maxdist2);
+        
+        VBVHAccel *BBH = new VBVHAccel(*volumeMap);
     }
 }
 

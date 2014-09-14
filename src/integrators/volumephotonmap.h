@@ -86,23 +86,16 @@ class VBVHAccel
 {
 public:
     // VBVHAccel Public Methods
-    VBVHAccel(const vector<Reference<Photon> > &p, uint32_t maxPrims = 1);
-    
+    VBVHAccel(VKdTree &volumemap);
     BBox WorldBound() const;
-    
     bool CanIntersect() const { return true; }
-    
     ~VBVHAccel();
-    
     bool Intersect(const Ray &ray, Intersection *isect) const;
-    
     bool IntersectP(const Ray &ray) const;
 private:
     // VBVHAccel Private Methods
-    VBVHBuildNode *recursiveBuild(MemoryArena &buildArena,
-                                  vector<VBVHPrimitiveInfo> &buildData, uint32_t start, uint32_t end,
-                                  uint32_t *totalNodes, vector<Reference<Primitive> > &orderedPrims);
-    
+    VBVHBuildNode* recursiveBuild(MemoryArena &buildArena, VKdTree &volumemap,
+                                  uint32_t nodenum, uint32_t *totalNodes);
     uint32_t flattenVBVHTree(VBVHBuildNode *node, uint32_t *offset);
     
     // VBVHAccel Private Data
@@ -116,7 +109,6 @@ private:
 
 VBVHAccel *CreateVBVHAccelerator(const vector<Reference<Primitive> > &prims,
                                  const ParamSet &ps);
-
 
 VolumePhotonIntegrator *CreatePhotonMapVolumeIntegrator(const ParamSet &params);
 
