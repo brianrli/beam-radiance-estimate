@@ -272,6 +272,33 @@ VBVHBuildNode* VBVHAccel::recursiveBuild(MemoryArena &buildArena, VKdTree &volum
     return node;
 }
 
+struct LinearVBVHNode {
+    BBox bounds;
+    uint32_t secondChildOffset; //second child
+    uint8_t axis;         // interior node: xyz
+    Photon photon;
+};
+
+uint32_t VBVHAccel::flattenVBVHTree(VBVHBuildNode *node, uint32_t *offset) {
+    
+    //no child
+    if (!node)
+        return *offset;
+    
+    LinearVBVHNode *linearNode = &nodes[*offset];
+    
+    uint32_t myOffset = (*offset)++;
+    
+    linearNode->bounds = node->photon.bound;
+    linearNode->axis = node->splitAxis;
+    linearNode->photon = node->photon;
+    
+    flattenVBVHTree(node->children[0], offset);
+    linearNode->secondChildOffset = flattenVBVHTree(node->children[1],offset);
+    
+    return myOffset;
+}
+
 VBVHAccel::VBVHAccel(VKdTree &volumemap) {
 
     // Recursively build BVH tree for primitives
@@ -281,12 +308,12 @@ VBVHAccel::VBVHAccel(VKdTree &volumemap) {
     int check = 0;
     
     // Compute representation of depth-first traversal of BVH tree
-//    nodes = AllocAligned<LinearVBVHNode>(totalNodes);
-//    for (uint32_t i = 0; i < totalNodes; ++i)
-//        new (&nodes[i]) LinearBVHNode;
-//    uint32_t offset = 0;
-//    flattenBVHTree(root, &offset);
-//    Assert(offset == totalNodes);
+    nodes = AllocAligned<LinearVBVHNode>(totalNodes);
+    for (uint32_t i = 0; i < totalNodes; ++i)
+        new (&nodes[i]) LinearVBVHNode;
+    uint32_t offset = 0;
+    flattenVBVHTree(root, &offset);
+    Assert(offset == totalNodes);
 }
 
 
