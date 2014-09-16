@@ -97,7 +97,9 @@ VKdTree::VKdTree(const vector<Photon> &d) {
     nNodes = d.size();
     nextFreeNode = 1;
     
-    nodes = VAllocAligned<VKdNode>(nNodes);
+    size_t bob = sizeof(VKdNode);
+    
+    nodes = AllocAligned<VKdNode>(nNodes);
     photon = VAllocAligned<Photon>(nNodes);
     
     vector<const Photon *> buildNodes(nNodes, NULL);
@@ -158,27 +160,25 @@ void VKdTree::buildRadii(uint32_t nodeNum, const Point &p, LookupProc &proc,
                          float &maxDistSquared){
     VKdNode *node = &nodes[nodeNum];
     float dist2 = maxDistSquared;
-    
     int axis = node->splitAxis;
     
-    if (axis != 3) {
-        //compute m at a given node, distance to the m closest photon
-        privateLookup(0, photon[nodeNum].p, proc, dist2);
-        photon[nodeNum].ri = max(sqrtf(dist2),sqrtf(proc.get_radius()))
-        * powf((float)proc.nLookup,0.333333333333333333f);
-        
-        Photon ndata = photon[nodeNum];
-        
-        proc.clear(); //perhaps not the most efficient
-        
-        if (node->hasLeftChild)
-            buildRadii(nodeNum+1, p, proc, maxDistSquared);
-        
-        proc.clear();
-        
-        if (node->rightChild < nNodes)
-            buildRadii(node->rightChild, p, proc, maxDistSquared);
-    }
+    //compute m at a given node, distance to the m closest photon
+    privateLookup(0, photon[nodeNum].p, proc, dist2);
+    photon[nodeNum].ri = max(sqrtf(dist2),sqrtf(proc.get_radius()))
+    * powf((float)proc.nLookup,0.333333333333333333f);
+    
+    Photon ndata = photon[nodeNum];
+    
+    //no radiuses of zero
+    Assert(ndata.ri != 0.f);
+    proc.clear(); //perhaps not the most efficient
+    
+    if (node->hasLeftChild)
+        buildRadii(nodeNum+1, p, proc, maxDistSquared);
+    proc.clear();
+    
+    if (node->rightChild < nNodes)
+        buildRadii(node->rightChild, p, proc, maxDistSquared);
 }
 
 
@@ -232,6 +232,7 @@ struct VBVHBuildNode {
 
         if(c1 != NULL)
             photon.bound = Union(c1->photon.bound,photon.bound);
+
         if(c0 != NULL)
             photon.bound = Union(c0->photon.bound,photon.bound);
 
@@ -249,6 +250,8 @@ VBVHBuildNode* VBVHAccel::recursiveBuild(MemoryArena &buildArena, VKdTree &volum
      (*totalNodes)++;
     VBVHBuildNode *node = buildArena.Alloc<VBVHBuildNode>();
     node->photon = volumemap.photon[nodenum];
+    Photon swag = volumemap.photon[nodenum];
+    Assert(node->photon.ri != 0.f);
 //  Bounding box given point and radius
     node->photon.bound = BBox(node->photon.p);
     node->photon.bound.Expand(node->photon.ri);
@@ -277,13 +280,22 @@ struct LinearVBVHNode {
     uint32_t secondChildOffset; //second child
     uint8_t axis;         // interior node: xyz
     Photon photon;
+    bool hasleft;
+    bool hasright;
 };
 
 uint32_t VBVHAccel::flattenVBVHTree(VBVHBuildNode *node, uint32_t *offset) {
-    
     //no child
     if (!node)
-        return *offset;
+        return *offset;    
+
+    //    int u[64];
+//    int test = 0;
+//    for(int i = 0; i < 64; i++){
+//        u[i]=i;
+//    }
+//    int a = u[test++];
+//    int b = u[test--];
     
     LinearVBVHNode *linearNode = &nodes[*offset];
     
@@ -292,9 +304,23 @@ uint32_t VBVHAccel::flattenVBVHTree(VBVHBuildNode *node, uint32_t *offset) {
     linearNode->bounds = node->photon.bound;
     linearNode->axis = node->splitAxis;
     linearNode->photon = node->photon;
+    linearNode->photon.bound = node->photon.bound;
     
-    flattenVBVHTree(node->children[0], offset);
-    linearNode->secondChildOffset = flattenVBVHTree(node->children[1],offset);
+    
+    if(node->children[0] != NULL){
+        flattenVBVHTree(node->children[0], offset);
+        linearNode->hasleft = true;
+    }
+    else
+        linearNode->hasleft = false;
+    
+    //do for bottom
+    if(node->children[1] != NULL){
+        linearNode->secondChildOffset = flattenVBVHTree(node->children[1],offset);
+        linearNode->hasright = true;
+    }
+    else
+        linearNode->hasright = false;
     
     return myOffset;
 }
@@ -305,15 +331,100 @@ VBVHAccel::VBVHAccel(VKdTree &volumemap) {
     MemoryArena buildArena;
     uint32_t totalNodes = 0;
     VBVHBuildNode *root = recursiveBuild(buildArena, volumemap, 0, &totalNodes);
-    int check = 0;
-    
     // Compute representation of depth-first traversal of BVH tree
+    size_t check = sizeof(LinearVBVHNode);
     nodes = AllocAligned<LinearVBVHNode>(totalNodes);
     for (uint32_t i = 0; i < totalNodes; ++i)
         new (&nodes[i]) LinearVBVHNode;
     uint32_t offset = 0;
     flattenVBVHTree(root, &offset);
     Assert(offset == totalNodes);
+}
+
+VBVHAccel::~VBVHAccel() {
+    FreeAligned(nodes);
+}
+
+
+static inline bool IntersectP(const BBox &bounds, const Ray &ray,
+                              const Vector &invDir, const uint32_t dirIsNeg[3]) {
+    // Check for ray intersection against $x$ and $y$ slabs
+    float tmin =  (bounds[  dirIsNeg[0]].x - ray.o.x) * invDir.x;
+    float tmax =  (bounds[1-dirIsNeg[0]].x - ray.o.x) * invDir.x;
+    float tymin = (bounds[  dirIsNeg[1]].y - ray.o.y) * invDir.y;
+    float tymax = (bounds[1-dirIsNeg[1]].y - ray.o.y) * invDir.y;
+    if ((tmin > tymax) || (tymin > tmax))
+        return false;
+    if (tymin > tmin) tmin = tymin;
+    if (tymax < tmax) tmax = tymax;
+    
+    // Check for ray intersection against $z$ slab
+    float tzmin = (bounds[  dirIsNeg[2]].z - ray.o.z) * invDir.z;
+    float tzmax = (bounds[1-dirIsNeg[2]].z - ray.o.z) * invDir.z;
+    if ((tmin > tzmax) || (tzmin > tmax))
+        return false;
+    if (tzmin > tmin)
+        tmin = tzmin;
+    if (tzmax < tmax)
+        tmax = tzmax;
+    return (tmin < ray.maxt) && (tmax > ray.mint);
+}
+
+bool VBVHAccel::Intersect(const Ray &ray, Intersection *isect) const {
+    
+    if (!nodes) return false;
+    bool hit = false;
+    Vector invDir(1.f / ray.d.x, 1.f / ray.d.y, 1.f / ray.d.z);
+    uint32_t dirIsNeg[3] = { invDir.x < 0, invDir.y < 0, invDir.z < 0 };
+    
+    // Follow ray through BVH nodes to find primitive intersections
+    uint32_t todoOffset = 0, nodeNum = 0;
+    uint32_t todo[64];
+    
+    while (true) {
+        const LinearVBVHNode *node = &nodes[nodeNum];
+        // Check ray against BVH node
+        if (::IntersectP(node->bounds, ray, invDir, dirIsNeg))
+        {
+            float dist = Cross(ray.d, ray.o-node->photon.p).Length();
+            // Intersect ray with primitives in leaf BVH node
+            if (dist < node->photon.ri)
+            {
+                hit = true;
+                
+            }
+
+            // Put far BVH node on _todo_ stack, advance to near node
+            if (dirIsNeg[node->axis])
+            {
+                if(node->hasleft)
+                    todo[todoOffset++] = nodeNum + 1; //place
+                if (node->hasright)
+                    nodeNum = node->secondChildOffset;
+                else{
+                    if (todoOffset == 0) break;
+                    nodeNum = todo[--todoOffset];
+                }
+            }
+            else
+            {
+                if (node->hasright)
+                    todo[todoOffset++] = node->secondChildOffset;
+                if(node->hasleft)
+                    nodeNum = nodeNum + 1;
+                else{
+                    if (todoOffset == 0) break;
+                    nodeNum = todo[--todoOffset];
+                }
+            }
+            
+        }
+        else {
+            if (todoOffset == 0) break;
+            nodeNum = todo[--todoOffset];
+        }
+    }
+    return hit;
 }
 
 

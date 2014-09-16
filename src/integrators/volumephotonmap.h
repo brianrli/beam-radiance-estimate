@@ -27,6 +27,9 @@ struct VBVHBuildNode;
 struct VBVHPrimitiveInfo;
 struct LinearVBVHNode;
 
+//I don't even know anymore...
+float VDistanceToLine(Ray &ray, Point &point);
+
 
 // PhotonIntegrator Declarations
 class VolumePhotonIntegrator : public VolumeIntegrator {
