@@ -23,9 +23,13 @@ struct VPhotonProcess;
 class VKdTree;
 
 //VBVH Structs
+class VBVHAccel;
 struct VBVHBuildNode;
 struct VBVHPrimitiveInfo;
 struct LinearVBVHNode;
+
+//Intersect Struct
+struct VIntersect;
 
 //I don't even know anymore...
 float VDistanceToLine(Ray &ray, Point &point);
@@ -83,6 +87,7 @@ private:
     int nVolumePaths;
 
     VKdTree *volumeMap;
+    VBVHAccel *BBH;
 };
 
 class VBVHAccel
@@ -93,7 +98,7 @@ public:
     BBox WorldBound() const;
     bool CanIntersect() const { return true; }
     ~VBVHAccel();
-    bool Intersect(const Ray &ray, Intersection *isect) const;
+    bool Intersect(const Ray &ray, vector<VIntersect> &vintersect) const;
     bool IntersectP(const Ray &ray) const;
 private:
     // VBVHAccel Private Methods

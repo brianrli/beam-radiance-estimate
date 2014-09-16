@@ -80,11 +80,11 @@
          ignoreCount = "0"
          continueAfterRunningActions = "No"
          filePath = "integrators/volumephotonmap.cpp"
-         timestampString = "432528109.465851"
+         timestampString = "432531047.877221"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "303"
-         endingLineNumber = "303"
+         startingLineNumber = "304"
+         endingLineNumber = "304"
          landmarkName = "VBVHAccel::flattenVBVHTree(VBVHBuildNode *node, uint32_t *offset)"
          landmarkType = "5">
       </FileBreakpoint>
@@ -102,15 +102,15 @@
          landmarkType = "5">
       </FileBreakpoint>
       <FileBreakpoint
-         shouldBeEnabled = "Yes"
+         shouldBeEnabled = "No"
          ignoreCount = "0"
          continueAfterRunningActions = "No"
          filePath = "integrators/volumephotonmap.cpp"
-         timestampString = "432528109.465851"
+         timestampString = "432531047.877221"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "340"
-         endingLineNumber = "340"
+         startingLineNumber = "341"
+         endingLineNumber = "341"
          landmarkName = "VBVHAccel::VBVHAccel(VKdTree &amp;volumemap)"
          landmarkType = "5">
       </FileBreakpoint>
@@ -132,11 +132,11 @@
          ignoreCount = "0"
          continueAfterRunningActions = "No"
          filePath = "integrators/volumephotonmap.cpp"
-         timestampString = "432528109.465851"
+         timestampString = "432531047.877221"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "335"
-         endingLineNumber = "335"
+         startingLineNumber = "336"
+         endingLineNumber = "336"
          landmarkName = "VBVHAccel::VBVHAccel(VKdTree &amp;volumemap)"
          landmarkType = "5">
       </FileBreakpoint>
@@ -145,11 +145,11 @@
          ignoreCount = "0"
          continueAfterRunningActions = "No"
          filePath = "integrators/volumephotonmap.cpp"
-         timestampString = "432528109.465851"
+         timestampString = "432531047.877221"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "309"
-         endingLineNumber = "309"
+         startingLineNumber = "310"
+         endingLineNumber = "310"
          landmarkName = "VBVHAccel::flattenVBVHTree(VBVHBuildNode *node, uint32_t *offset)"
          landmarkType = "5">
       </FileBreakpoint>
@@ -167,16 +167,68 @@
          landmarkType = "5">
       </FileBreakpoint>
       <FileBreakpoint
+         shouldBeEnabled = "No"
+         ignoreCount = "0"
+         continueAfterRunningActions = "No"
+         filePath = "integrators/volumephotonmap.cpp"
+         timestampString = "432531047.877221"
+         startingColumnNumber = "9223372036854775807"
+         endingColumnNumber = "9223372036854775807"
+         startingLineNumber = "300"
+         endingLineNumber = "300"
+         landmarkName = "VBVHAccel::flattenVBVHTree(VBVHBuildNode *node, uint32_t *offset)"
+         landmarkType = "5">
+      </FileBreakpoint>
+      <FileBreakpoint
+         shouldBeEnabled = "No"
+         ignoreCount = "0"
+         continueAfterRunningActions = "No"
+         filePath = "integrators/volumephotonmap.cpp"
+         timestampString = "432536172.299293"
+         startingColumnNumber = "9223372036854775807"
+         endingColumnNumber = "9223372036854775807"
+         startingLineNumber = "923"
+         endingLineNumber = "923"
+         landmarkName = "VolumePhotonIntegrator::Li(const Scene *scene, const Renderer *renderer, const RayDifferential &amp;ray, const Sample *sample, RNG &amp;rng, Spectrum *transmittance, MemoryArena &amp;arena)"
+         landmarkType = "5">
+      </FileBreakpoint>
+      <FileBreakpoint
+         shouldBeEnabled = "No"
+         ignoreCount = "0"
+         continueAfterRunningActions = "No"
+         filePath = "integrators/volumephotonmap.cpp"
+         timestampString = "432536256.055827"
+         startingColumnNumber = "9223372036854775807"
+         endingColumnNumber = "9223372036854775807"
+         startingLineNumber = "935"
+         endingLineNumber = "935"
+         landmarkName = "VolumePhotonIntegrator::Li(const Scene *scene, const Renderer *renderer, const RayDifferential &amp;ray, const Sample *sample, RNG &amp;rng, Spectrum *transmittance, MemoryArena &amp;arena)"
+         landmarkType = "5">
+      </FileBreakpoint>
+      <FileBreakpoint
          shouldBeEnabled = "Yes"
          ignoreCount = "0"
          continueAfterRunningActions = "No"
          filePath = "integrators/volumephotonmap.cpp"
-         timestampString = "432528109.465851"
+         timestampString = "432536287.354248"
          startingColumnNumber = "9223372036854775807"
          endingColumnNumber = "9223372036854775807"
-         startingLineNumber = "299"
-         endingLineNumber = "299"
-         landmarkName = "VBVHAccel::flattenVBVHTree(VBVHBuildNode *node, uint32_t *offset)"
+         startingLineNumber = "386"
+         endingLineNumber = "386"
+         landmarkName = "VBVHAccel::Intersect(const Ray &amp;ray, vector&lt;VIntersect&gt; &amp;vintersect)"
+         landmarkType = "5">
+      </FileBreakpoint>
+      <FileBreakpoint
+         shouldBeEnabled = "Yes"
+         ignoreCount = "0"
+         continueAfterRunningActions = "No"
+         filePath = "integrators/volumephotonmap.cpp"
+         timestampString = "432536402.527709"
+         startingColumnNumber = "9223372036854775807"
+         endingColumnNumber = "9223372036854775807"
+         startingLineNumber = "404"
+         endingLineNumber = "404"
+         landmarkName = "VBVHAccel::Intersect(const Ray &amp;ray, vector&lt;VIntersect&gt; &amp;vintersect)"
          landmarkType = "5">
       </FileBreakpoint>
    </FileBreakpoints>
