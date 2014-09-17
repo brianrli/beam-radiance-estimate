@@ -15,11 +15,17 @@ struct Photon {
     {
         ri = 0.f;
     }
+    Photon(const Photon&ph){
+        p = ph.p;
+        alpha = ph.alpha;
+        wi = ph.wi;
+        ri = ph.ri;
+        bound = ph.bound;
+    }
     Photon() { }
     Point p;
     Spectrum alpha;
     Vector wi;
-    
     //bbh+per photon radius
     float ri;
     BBox bound;
@@ -164,8 +170,8 @@ void VKdTree::buildRadii(uint32_t nodeNum, const Point &p, LookupProc &proc,
     
     //compute m at a given node, distance to the m closest photon
     privateLookup(0, photon[nodeNum].p, proc, dist2);
-    photon[nodeNum].ri = max(sqrtf(dist2),sqrtf(proc.get_radius()))
-    * powf((float)proc.nLookup,0.333333333333333333f);
+    photon[nodeNum].ri = .2f * max(sqrtf(dist2),sqrtf(proc.get_radius()))
+    * powf((float)proc.nLookup,0.333333333333333333f); //increase size of radius
     
     Photon ndata = photon[nodeNum];
     
@@ -254,7 +260,7 @@ VBVHBuildNode* VBVHAccel::recursiveBuild(MemoryArena &buildArena, VKdTree &volum
     Assert(node->photon.ri != 0.f);
 //  Bounding box given point and radius
     node->photon.bound = BBox(node->photon.p);
-    node->photon.bound.Expand(node->photon.ri);
+    node->photon.bound.Expand(node->photon.ri*3.f);
 
     VKdNode *kdnode = &volumemap.nodes[nodenum];
     
@@ -332,7 +338,6 @@ VBVHAccel::VBVHAccel(VKdTree &volumemap) {
     uint32_t totalNodes = 0;
     VBVHBuildNode *root = recursiveBuild(buildArena, volumemap, 0, &totalNodes);
     // Compute representation of depth-first traversal of BVH tree
-    size_t check = sizeof(LinearVBVHNode);
     nodes = AllocAligned<LinearVBVHNode>(totalNodes);
     for (uint32_t i = 0; i < totalNodes; ++i)
         new (&nodes[i]) LinearVBVHNode;
@@ -374,11 +379,12 @@ struct VIntersect{
     VIntersect(Photon p, float d):
     dist(d)
     {
-        photon = &p;
+        photon = Photon(p);
     }
     
-    Photon *photon;
+    Photon photon;
     float dist;
+    int a;
 };
 
 bool VBVHAccel::Intersect(const Ray &ray, vector<VIntersect> &vintersect) const {
@@ -391,17 +397,21 @@ bool VBVHAccel::Intersect(const Ray &ray, vector<VIntersect> &vintersect) const 
     // Follow ray through BVH nodes to find primitive intersections
     uint32_t todoOffset = 0, nodeNum = 0;
     uint32_t todo[64];
+    for (int i = 0; i<64; i++){
+        todo[i]=0;
+    }
     
     while (true) {
         const LinearVBVHNode *node = &nodes[nodeNum];
         // Check ray against BVH node
-        if (::IntersectP(node->bounds, ray, invDir, dirIsNeg))
+        if (::IntersectP(node->photon.bound, ray, invDir, dirIsNeg))
         {
             float dist = Cross(ray.d, ray.o-node->photon.p).Length();
             // Intersect ray with primitives in leaf BVH node
             if (dist < node->photon.ri)
             {
-                vintersect.push_back(VIntersect(node->photon,dist));
+                vintersect.push_back(VIntersect(node->photon,dist)); //Bound doesn't work
+//                VIntersect sample = VIntersect(node->photon,dist);
                 hit = true;
                 
             }
@@ -570,10 +580,21 @@ float VPhaseHG(const Vector &w, const Vector &wp, float g) {
     (1.f - g*g) / powf(1.f + g*g - 2.f * g * costheta, 1.5f);
 }
 
+//float SampleScattering(const Vector &wi, float u1, float u2, Vector &wo){
+//    wo = VSampleHG(wi, 0.5f, u1, u2);
+//    return VPhaseHG(wi, wo, 0.5f);
+//}
+
 float SampleScattering(const Vector &wi, float u1, float u2, Vector &wo){
-    wo = VSampleHG(wi, 0.9f, u1, u2);
-    return VPhaseHG(wi, wo, 0.9f);
+    float phi = u1*2*M_PI;
+    float theta = u2*M_PI;
+    float cosTheta = cos(theta);
+    wo.x = cosTheta*cos(phi);
+    wo.y = cosTheta*sin(phi);
+    wo.z = sin(theta);
+    return INV_TWOPI/2.f;
 }
+
 void VolumePhotonShootingTask::Run() {
     
     // Declare local variables for _VolumePhotonShootingTask_
@@ -607,6 +628,7 @@ void VolumePhotonShootingTask::Run() {
             Normal Nl;
 
             //Alpha (PBRT)
+            VisibilityTester vis;
             Spectrum Le = light->Sample_L(scene, ls, u[4], u[5],
                                           time, &photonRay, &Nl, &pdf);
             if (pdf == 0.f || Le.IsBlack()) continue;
@@ -639,9 +661,7 @@ void VolumePhotonShootingTask::Run() {
                     
                     u2 = (rng.RandomFloat() + 0.5f) * marchstep; //[0,1) + 0.5 * marchstep
                     
-                    //for debugging purposes
-
-                    if( u2 >= (vt1-vt0)/photonRay.d.Length()){ //if randomly generated step is larger than 
+                    if( u2 >= (vt1-vt0)/photonRay.d.Length()){ //if randomly generated step is larger than
 //                        photonRay.o = volumeRay(vt1+0.00001f);
 //                        alpha *= Exp(-volume->tau(volumeRay));
                         inVolume = false;
@@ -650,9 +670,9 @@ void VolumePhotonShootingTask::Run() {
                         volumeRay.maxt = u2; //create a new ray w/in  volume bounds
                     }                    
 
+                    
                     while(inVolume)
                     {
-                    
                     // Ray march and decide to scattering/absorbing or move on
                         Spectrum transmittance = Exp(-volume->tau(volumeRay)) * oldTransmittance;
                         alpha *= transmittance;
@@ -660,8 +680,7 @@ void VolumePhotonShootingTask::Run() {
                         if(1){ // Enforce interaction
                             
                             Point interactPoint = volumeRay(volumeRay.maxt);
-                            
-                            // Store a photon
+                                                        // Store a photon
                             if(!volumeDone && !firstInteraction){
                                 Photon photon(interactPoint, alpha, -volumeRay.d,integrator->blur);
                                 localVolumePhotons.push_back(photon);
@@ -669,26 +688,33 @@ void VolumePhotonShootingTask::Run() {
                             }
                             
                             // Choose scattering or absorbing
+//                            float t = volume->sigma_t(interactPoint, volumeRay.d,volumeRay.time).y();
+//                            float s = volume->sigma_s(interactPoint, volumeRay.d,volumeRay.time).y();
+//                            float r = rng.RandomFloat();
+//                            float m = r*t;
+                            
                             if((rng.RandomFloat() * volume->sigma_t(interactPoint, volumeRay.d,volumeRay.time).y()) <
                                volume->sigma_s(interactPoint, volumeRay.d,volumeRay.time).y()){
 
                                 // Scattering, sampling a new direction
                                 oldTransmittance = Spectrum(1.f);
                                 Vector newDirection;
-                                float pdf = SampleScattering(volumeRay.d, rng.RandomFloat(), rng.RandomFloat(), newDirection);
-                                alpha *= pdf;
+                                float spdf = SampleScattering(volumeRay.d, rng.RandomFloat(), rng.RandomFloat(), newDirection);
+                                alpha *= spdf;
 
                                 // Specify new volumeRay
-                                photonRay.o = interactPoint;
-                                photonRay.d = newDirection;
+                                volumeRay.o = interactPoint;
+//                                volumeRay.d = newDirection; //try with same direction
                                 u6 = rng.RandomFloat() + 0.5f;
-                                photonRay.maxt = marchstep * u6; //new photonray
+                                volumeRay.maxt = marchstep * u6; //new photonray
+
+                                firstInteraction = false; //only use scattered
                                 
-                                firstInteraction = false; //only use scattered 
-                                if(!volume->Inside(photonRay(photonRay.maxt))){
+                                if(!volume->Inside(volumeRay(volumeRay.maxt))){
                                     break;
                                 }
-
+                                if(scene->IntersectP(volumeRay))
+                                    break;
                             }
                             else
                                 break; // Absorbing, end of the story
@@ -781,8 +807,8 @@ void VolumePhotonIntegrator::Preprocess(const Scene *scene,
     
         //traverse volumeMap, assign valid radius to Photons
         float maxdist2 = maxDistSquared * 5.f;
-        VPhotonProcess proc(10,Point()); //find m closest
-        proc.photons = (ClosePhoton *)alloca(10 * sizeof(ClosePhoton));
+        VPhotonProcess proc(5,Point()); //find m closest
+        proc.photons = (ClosePhoton *)alloca(5 * sizeof(ClosePhoton));
         volumeMap->buildRadii(0, Point(), proc, maxdist2);
         
         BBH = new VBVHAccel(*volumeMap);
@@ -816,154 +842,157 @@ Spectrum VolumePhotonIntegrator::Transmittance(const Scene *scene,
     Spectrum tau = scene->volumeRegion->tau(ray, step, offset);
     return Exp(-tau);
 }
-//
-//Spectrum VolumePhotonIntegrator::Li(const Scene *scene,
-//            const Renderer *renderer,
-//            const RayDifferential &ray,
-//            const Sample *sample,
-//            RNG &rng,
-//            Spectrum *transmittance,
-//            MemoryArena &arena) const {
-//
-//	// Pointers assignment
-//	VolumeRegion *vr = scene->volumeRegion;
-//	VKdTree *map = volumeMap;
-//    
-//	if(!map){
-//		Error("Volume photon map is not initialized");
-//		exit(1);
-//	}
-//	
-//    float t0, t1;
-//	if (!vr || !vr->IntersectP(ray, &t0, &t1)) return 0.f;
-//
-//	// Do multiple scattering volume integration in _vr_
-//	Spectrum Lv(0.);
-//
-//	// Prepare for volume integration stepping
-//	int N = Ceil2Int((t1-t0) / stepSize);
-//	float step = (t1 - t0) / N; //split into N steps
-//	Spectrum Tr(1.f);
-//	Point p = ray(t0), pPrev;
-//	Vector w = -ray.d; 
-//
-//	if (sample)
-//		t0 += sample->oneD[scatterSampleOffset][0] * step;
-//	else
-//		t0 += rng.RandomFloat() * step;
-//	// Compute sample patterns for multiple scattering samples
-//	float *samp = (float *)malloc(3 * N * sizeof(float));
-//	
-//    LatinHypercube(samp, N, 3, rng);
-//	
-//    int sampOffset = 0;
-//
-//	for (int i = 0; i < N; ++i, t0 += step) {
-//		// Advance to sample at _t0_ and update _T_
-//		pPrev = p;
-//		p = ray(t0);
-//		Spectrum stepTau = vr->tau(Ray(pPrev, p - pPrev, 0, 1), .5f * stepSize, rng.RandomFloat());
-//		Tr *= Exp(-stepTau);
-//
-//		// Possibly terminate raymarching if transmittance is small
-//		if (Tr.y() < 1e-3) {
-//			const float continueProb = .5f;
-//			if (rng.RandomFloat() > continueProb) break;
-//			Tr /= continueProb;
-//		}
-//		// Compute multiple-scattering source term at _p_
-//		
-//        float maxDistS = maxDistSquared;
-//		Lv += Tr * vr->Lve(p, w,1e-4f);
-//        
-//		Spectrum ss(1.f); //= vr->sigma_s(p, w);
-//		if (!ss.IsBlack()) {
-//			// Collect nearby photons
-//			VPhotonProcess proc(nLookup, p);
-//			proc.photons = (ClosePhoton *)alloca(nLookup * sizeof(ClosePhoton));
-//			map->Lookup(p, proc, maxDistS);
-//
-//			if(maxDistS > 0.f){
-//				float scale = 0.75f / (float(nVolumePaths) * powf(maxDistS, 1.5f)  * M_PI);
-//				//float scale = 0.75f / (powf(maxDistS, 1.5f)  * M_PI * vr->sigma_t(p, w));
-//				ClosePhoton *photons = proc.photons;
-//				int nFound = proc.nfound;
-//				Spectrum L(0.);
-//				for (int i = 0; i < nFound; ++i){
-//					if(photons[i].photon->alpha.y() < 10000)
-//						L += vr->p(p, photons[i].photon->wi, w,1e-4f) * photons[i].photon->alpha;
-//				}
-//				Lv += Tr * scale * L / vr->sigma_t(p, w,1e-4f);
-//			}
-//
-//		}
-//		sampOffset += 3;
-//	}
-//
-//	Lv *= step;
-//    *transmittance = Tr;
-//	free((void*)samp);
-//	return Lv * step;
-//}
+
+Spectrum VolumePhotonIntegrator::Li(const Scene *scene,
+            const Renderer *renderer,
+            const RayDifferential &ray,
+            const Sample *sample,
+            RNG &rng,
+            Spectrum *transmittance,
+            MemoryArena &arena) const {
+
+	// Pointers assignment
+	VolumeRegion *vr = scene->volumeRegion;
+	VKdTree *map = volumeMap;
+    
+	if(!map){
+		Error("Volume photon map is not initialized");
+		exit(1);
+	}
+	
+    float t0, t1;
+	if (!vr || !vr->IntersectP(ray, &t0, &t1)) return 0.f;
+
+	// Do multiple scattering volume integration in _vr_
+	Spectrum Lv(0.);
+
+	// Prepare for volume integration stepping
+	int N = Ceil2Int((t1-t0) / stepSize);
+	float step = (t1 - t0) / N; //split into N steps
+	Spectrum Tr(1.f);
+	Point p = ray(t0), pPrev;
+	Vector w = -ray.d; 
+
+	if (sample)
+		t0 += sample->oneD[scatterSampleOffset][0] * step;
+	else
+		t0 += rng.RandomFloat() * step;
+	// Compute sample patterns for multiple scattering samples
+	float *samp = (float *)malloc(3 * N * sizeof(float));
+	
+    LatinHypercube(samp, N, 3, rng);
+	
+    int sampOffset = 0;
+
+	for (int i = 0; i < N; ++i, t0 += step) {
+		// Advance to sample at _t0_ and update _T_
+		pPrev = p;
+		p = ray(t0);
+		Spectrum stepTau = vr->tau(Ray(pPrev, p - pPrev, 0, 1), .5f * stepSize, rng.RandomFloat());
+		Tr *= Exp(-stepTau);
+
+		// Possibly terminate raymarching if transmittance is small
+		if (Tr.y() < 1e-3) {
+			const float continueProb = .5f;
+			if (rng.RandomFloat() > continueProb) break;
+			Tr /= continueProb;
+		}
+		// Compute multiple-scattering source term at _p_
+		
+        float maxDistS = maxDistSquared;
+		Lv += Tr * vr->Lve(p, w,1e-4f);
+        
+		Spectrum ss(1.f); //= vr->sigma_s(p, w);
+		if (!ss.IsBlack()) {
+			// Collect nearby photons
+			VPhotonProcess proc(nLookup, p);
+			proc.photons = (ClosePhoton *)alloca(nLookup * sizeof(ClosePhoton));
+			map->Lookup(p, proc, maxDistS);
+
+			if(maxDistS > 0.f){
+				float scale = 0.75f / (float(nVolumePaths) * powf(maxDistS, 1.5f)  * M_PI);
+				//float scale = 0.75f / (powf(maxDistS, 1.5f)  * M_PI * vr->sigma_t(p, w));
+				ClosePhoton *photons = proc.photons;
+				int nFound = proc.nfound;
+				Spectrum L(0.);
+				for (int i = 0; i < nFound; ++i){
+					if(photons[i].photon->alpha.y() < 10000)
+						L += vr->p(p, photons[i].photon->wi, w,1e-4f) * photons[i].photon->alpha;
+				}
+				Lv += Tr * scale * L / vr->sigma_t(p, w,1e-4f);
+			}
+
+		}
+		sampOffset += 3;
+	}
+
+	Lv *= step;
+    *transmittance = Tr;
+	free((void*)samp);
+	return Lv * step;
+}
 
 float bi_kernel(float x){
     return 3*powf(M_PI,-1)*powf(1-powf(x,2),2.f);
 }
 
-
-Spectrum VolumePhotonIntegrator::Li(const Scene *scene,
-                                    const Renderer *renderer,
-                                    const RayDifferential &ray,
-                                    const Sample *sample,
-                                    RNG &rng,
-                                    Spectrum *transmittance,
-                                    MemoryArena &arena) const {
-    
-	// Pointers assignment
-	if(!BBH){
-		Error("Volume photon map is not initialized");
-		exit(1);
-	}
-    VolumeRegion *vr = scene->volumeRegion;
-    
-    Vector w = -ray.d;
-	vector<VIntersect> intersections;
-    BBH->Intersect(ray, intersections);
-    Spectrum Tr(1.f);
-    
-    int nints = intersections.size();
-    Spectrum L(0.f); //accumulated radiance
-    for ( auto i = intersections.begin(); i != intersections.end(); i++ ) {
-        Point p = i->photon->p;
-        float di = i->dist;
-        float ri = i->photon->ri;
-        Vector wi = i->photon->wi;
-        float ti = Dot(p-ray.o,w);
-        Point xp = ray.o + (ti*w);
-        Point o = ray.o;
-        
-        //Ki(x,w,s,xi,ri)
-        float Ki = powf(ri,-2.f)*bi_kernel(di/ri);
-        
-        //Transmittance
-        Spectrum stepTau = vr->tau(Ray(o, Vector(xp), 0, 1));
-        Tr *= Exp(-stepTau);
-        
-        //Scatter
-        Spectrum ss = vr->sigma_s(xp, w,ray.time);
-        
-        //Phase Function
-        Spectrum pf = vr->p(p, wi, w,1e-4f);
-        
-        //Power
-        Spectrum weight = i->photon->alpha;
-        
-        L += Tr*Ki*ss*pf*weight;
-    }
-    L /= nints;
-    *transmittance = Tr;
-	return L;
-}
+//
+//Spectrum VolumePhotonIntegrator::Li(const Scene *scene,
+//                                    const Renderer *renderer,
+//                                    const RayDifferential &ray,
+//                                    const Sample *sample,
+//                                    RNG &rng,
+//                                    Spectrum *transmittance,
+//                                    MemoryArena &arena) const {
+//    
+//	// Pointers assignment
+//	if(!BBH){
+//		Error("Volume photon map is not initialized");
+//		exit(1);
+//	}
+//    VolumeRegion *vr = scene->volumeRegion;
+//    
+//    Vector w = -ray.d;
+//	vector<VIntersect> intersections;
+//    intersections.reserve(100);
+//    BBH->Intersect(ray, intersections);
+//    Spectrum Tr(1.f);
+//    
+//    float nints = intersections.size();
+//    Spectrum L(1.f); //accumulated radiance
+//    
+//    for ( auto i = intersections.begin(); i != intersections.end(); i++ ) {
+//        Point p = i->photon.p;
+//        float di = i->dist;
+//        float ri = i->photon.ri;
+//        Vector wi = i->photon.wi;
+//        float ti = Dot(p-ray.o,w);
+//        const Point xp = ray.o + (ti*w);
+//        const Point o = ray.o;
+//        
+//        //Ki(x,w,s,xi,ri)
+//        float Ki = powf(ri,-2.f)*bi_kernel(di/ri);
+//        
+//        //Transmittance
+//        Spectrum stepTau = vr->tau(Ray(o, xp-o, 0, 1));
+//        Tr = Exp(-stepTau);
+//        
+//        //Scatter
+//        Spectrum ss = vr->sigma_s(xp, w,ray.time);
+//        
+//        //Phase Function
+//        Spectrum pf = vr->p(p, wi, w,1e-4f);
+//        
+//        //Power
+//        Spectrum weight = i->photon.alpha;
+//        
+//        L += Tr*Ki*ss*pf*weight;
+//    }
+//    if(nints>0.f)
+//        L /= nints;
+//    *transmittance = Tr;
+//	return L;
+//}
 
 
 // PhotonIntegrator Method Definitions

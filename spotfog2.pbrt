@@ -6,13 +6,14 @@ PixelFilter "gaussian"
 
 Rotate 5 1 0 0 
 Camera "perspective" "float fov" [70]
+
 SurfaceIntegrator "directlighting"
-    VolumeIntegrator "volumephotonmap" 
-    "integer volumephotons"     [4000]
-    "integer finalgathersamples" [0]
-    "integer nused" [50]
-    "float maxdist" [4]
-    "float stepsize" [5]
+VolumeIntegrator "volumephotonmap" 
+"integer volumephotons"     [3000]
+"integer finalgathersamples" [0]
+"integer nused" [30]
+"float maxdist" [2]
+"float stepsize" [3]
 
 WorldBegin
 Translate -1 -1 3
