@@ -228,7 +228,8 @@ Spectrum SamplerRenderer::Li(const Scene *scene,
     //radiance due to volume scattering
     Spectrum Lvi = volumeIntegrator->Li(scene, this, ray, sample, rng,
                                         T, arena);
-    return *T * Li + Lvi;
+//    return *T * Li + Lvi;
+    return Li + Lvi;
 }
 
 

@@ -67,7 +67,7 @@
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "--outfile /Users/brianli/Desktop/pbrt-v2-master/output/output2.exr"
+            argument = "--outfile /Users/brianli/Desktop/pbrt-v2-master/output/output34.exr"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
